@@ -108,7 +108,8 @@ export function collectDependencies(rawCode: string, baseRoute: string, dependen
 		CallExpression(babelPath: NodePath<tType.CallExpression>)
 		{
 			if(
-				(babelPath.node.callee as any).name === 'require' &&
+				((babelPath.node.callee as any).name === 'require'
+					|| (babelPath.node.callee as any).name === 'import') &&
 				babelPath.node.arguments.length === 1 &&
 				babelPath.node.arguments[0].type === 'StringLiteral'
 			)
@@ -342,9 +343,11 @@ export async function fetchAndStore(baseRoute: string, dependenciesToFetch?: str
 		sha: await getGitShaBrowser(arrayBuffer)
 	}, editorDatabase);
 
-	return [targetUrl, !!rawCode.match(/^export\s/gmi)];
+	return [targetUrl, !!rawCode.match(/^export\s|import\.meta/gmi)];
 }
 
+
+compileSelf.fetchAndStore = fetchAndStore;
 
 
 export async function fetchTranspileAndStore(baseRoute: string, dependenciesToFetch?: string[]): Promise<string>
@@ -412,6 +415,8 @@ export async function fetchTranspileAndStore(baseRoute: string, dependenciesToFe
 	return targetUrl;
 }
 
+
+compileSelf.fetchTranspileAndStore = fetchTranspileAndStore;
 
 
 export function transpileTypescriptWidget(rawCode: string, baseRoute: string): any
@@ -680,7 +685,7 @@ export async function loadAndInstantiate(route: ComponentRoute): Promise<any>
 	const modulePromise = import(/* webpackIgnore: true */ targetUrl + '?t=' + Date.now() + '&local-csp=true');
 	registry.set(targetUrl, modulePromise);
 	const module = await modulePromise;
-	return new module[route.className](route.label);
+	return new (module?.default?.[route.className] ?? module?.[route.className] ?? compileSelf[route.className])(route.label);
 }
 
 

@@ -223,7 +223,7 @@ async function putRecordInternal(storeName, record, dbName = null)
 	const newerContents = localSelf.FS?.virtual[filePath]?.contents
 		|| localSelf.FS?.virtual[record.path]?.contents;
 
-	if(localSelf.FS.virtual[filePath]?.timestamp
+	if(localSelf.FS?.virtual[filePath]?.timestamp
 		&& record.timestamp
 		&& localSelf.FS.virtual[filePath]?.timestamp > record.timestamp)
 	{

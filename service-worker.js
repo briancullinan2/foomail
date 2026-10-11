@@ -186,7 +186,6 @@ async function mkdirp(path, selected)
 			createdDirectories.add(dir);
 		} catch(dbErr)
 		{
-			debugger;
 			console.error(`❌ [SW-DATABASE] mkdirp failed to store record for "${dir}":`, dbErr);
 		}
 	}
@@ -277,7 +276,11 @@ async function fetchAsset(urlInput, key, selected)
 		{
 			console.log(`🌐 [SW-NET] Launching direct Request object pass-through fetch for URL: "${urlString}"`);
 			// If passing a Request object, clone it if it's going to be reused or has a body
-			response = await fetch(urlInput);
+			response = await fetch(urlInput, {
+				cache: 'no-store',
+				credentials: 'omit',
+				signal: timeoutSignal
+			});
 		}
 
 		console.log(`🌐 [SW-NET] Fetch response received for "${key}". Status: ${response.status} (${response.statusText}) | Type: ${response.type}`);
@@ -1114,6 +1117,10 @@ serviceSelf.addEventListener('fetch', (event) =>
 		localName = '/base' + (assetUrl.startsWith('/') ? '' : '/') + assetUrl;
 	}
 
+	if(localName.includes('html-worker'))
+	{
+		// debugger;
+	}
 	const contentType = getMimeType(assetUrl);
 
 	event.respondWith((async () =>
@@ -1147,6 +1154,7 @@ serviceSelf.addEventListener('fetch', (event) =>
 		try
 		{
 			const files = await serviceSelf.getRecord?.(serviceSelf.DB_STORE_NAME ?? '', localName, selected);
+
 			if(files && files.contents)
 			{
 				/** @type {ArrayBuffer | undefined} */
@@ -1187,7 +1195,7 @@ serviceSelf.addEventListener('fetch', (event) =>
 			}
 		} catch(dbReadErr)
 		{
-			console.error(`❌ [SW-FETCH-STORE] DB Crash for key "${localName}":`, dbReadErr);
+			originalConsole.error(`❌ [SW-FETCH-STORE] DB Crash for key "${localName}":`, dbReadErr);
 		}
 
 		return fetch(event.request);
