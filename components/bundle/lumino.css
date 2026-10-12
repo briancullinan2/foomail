@@ -163,6 +163,12 @@ html {
 	font-family: boxicons !important;
 }
 
+[class^="bxf"]::before,
+[class*=" bxf"]::before,
+.bxf {
+	font-family: boxicons-filled !important;
+}
+
 .lm-DataGrid-viewport {
 	height: 100%;
 	width: 100%;

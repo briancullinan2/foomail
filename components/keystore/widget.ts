@@ -42,6 +42,7 @@ export class KeystoreWidget extends Widget
 		super();
 		this.title.label = title ?? 'Password Manager';
 		this.title.iconClass = 'bx bx-key';
+		this.title.closable = true;
 		this.addClass('lumino-password-manager');
 		this.initDOM();
 		this.initIndexedDB();
@@ -68,7 +69,7 @@ export class KeystoreWidget extends Widget
                         <h2><i class="bx bx-key"></i> Passwords</h2>
                         <div class="pwm-actions">
                             <button id="pwmAddBtn" title="Add New Item"><i class="bx bx-plus"></i></button>
-                            <button id="pwmExportBtn" title="Export All"><i class="bx bx-arrow-in-down-square-half"></i></button>
+                            <button id="pwmExportBtn" title="Export All"><i class="bx bx-archive-arrow-down"></i></button>
                         </div>
                     </div>
 

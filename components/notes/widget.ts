@@ -33,6 +33,7 @@ export class NotesWidget extends Widget
 		super();
 		this.title.label = title ?? 'Notes/Journal';
 		this.title.iconClass = 'bx bx-note-book';
+		this.title.closable = true;
 		this.addClass('lumino-terminal-journal');
 		this.initDOM();
 		this.loadDefaultLogs();

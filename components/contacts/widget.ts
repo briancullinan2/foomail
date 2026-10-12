@@ -1,283 +1,151 @@
 import { Widget } from '@lumino/widgets';
+import { ParseVCard, VCardContact } from './parse-vcf';
+import { Message } from '@lumino/messaging';
+import { ContactsSidebar } from './widget-sidebar';
+import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow } from '../bundle/menu.d';
+import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import { ISignal, Signal } from '@lumino/signaling';
 
-export interface VCardContact
-{
-	uid: string;
-	categories: string; // Organizational group (e.g., Work, Friends, Engineering)
-	fn: string;          // Formatted Name
-	n: string;           // Structured Name (Last;First;Middle;Prefix;Suffix)
-	nickname: string;
-	email: string;
-	tel: string;
-	adr: string;         // Street;Extended;City;State;Zip;Country
-	title: string;
-	org: string;
-	role: string;
-	bday: string;
-	url: string;
-	note: string;
-	tz: string;
-	geo: string;
-	rev: string;
-}
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
+	& RepositorySettingsWindow = self as unknown as any;
 
 export class ContactsWidget extends Widget
 {
 	private contacts: VCardContact[] = [];
-	private filteredContacts: VCardContact[] = [];
 	private selectedContactUid: string | null = null;
-	private selectedGroup: string = 'All';
 	private isEditing: boolean = false;
 
 	// UI Elements
-	private groupListEl!: HTMLElement;
-	private contactListEl!: HTMLElement;
 	private detailPaneEl!: HTMLElement;
-	private searchInput!: HTMLInputElement;
+	private _contactsSidebar?: ContactsSidebar;
+	private subSelected: (_: Widget, id: string) => any = (_, id) =>
+	{
+		this.selectedContactUid = id;
+		this.renderDetailPane();
+	};
+	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
+	{
+		this.isEditing = edit;
+		this.renderDetailPane();
+	};
+	private subChanged: (_: Widget, items: VCardContact[]) => any = (_, items) =>
+	{
+		this.contacts = items;
+		this.renderDetailPane();
+	};
+	private _contactsChanged: Signal<ContactsWidget, VCardContact[]> = new Signal(this);
+
+	public get contactsChanged(): ISignal<ContactsWidget, VCardContact[]>
+	{
+		return this._contactsChanged;
+	}
 
 	constructor(title?: string)
 	{
 		super();
 		this.title.label = title ?? 'Contacts List';
 		this.title.iconClass = 'bx bx-group';
+		this.title.closable = true;
 		this.addClass('lumino-contact-manager');
 		this.initDOM();
-		this.loadSampleContacts();
+	}
+
+	protected onAfterAttach(): void
+	{
+		if(this._contactsSidebar && !this._contactsSidebar.isAttached)
+		{
+			this.openSidebar();
+		}
+		this.resubscribeSidebar();
+	}
+
+	protected override onAfterShow(msg: Message): void
+	{
+		super.onAfterShow(msg);
+		this.openSidebar();
+		this.resubscribeSidebar();
+	}
+
+	private resubscribeSidebar()
+	{
+		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
+		this._contactsSidebar?.editContact.disconnect(this.subEditing);
+		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
+		this._contactsSidebar?.selectedContact.connect(this.subSelected);
+		this._contactsSidebar?.editContact.connect(this.subEditing);
+		this._contactsSidebar?.contactsChanged.connect(this.subChanged);
+	}
+
+
+	protected override onBeforeHide(msg: Message): void
+	{
+		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
+		this._contactsSidebar?.editContact.disconnect(this.subEditing);
+		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
+		this._contactsSidebar?.close();
+		super.onBeforeHide(msg);
+	}
+
+
+	protected override onBeforeDetach(msg: Message): void
+	{
+		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
+		this._contactsSidebar?.editContact.disconnect(this.subEditing);
+		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
+		this._contactsSidebar?.close();
+		super.onBeforeDetach(msg);
+	}
+
+	private openSidebar()
+	{
+		const that = this;
+		setTimeout(() =>
+		{
+			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._contactsSidebar)
+			{
+				if(!this._contactsSidebar?.isAttached)
+				{
+					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._contactsSidebar, {
+						type: 'outline',
+						projectId: that._contactsSidebar?.constructor.name
+					});
+				}
+			}
+		}, 300);
 	}
 
 	private initDOM(): void
 	{
 		this.node.innerHTML = `
-            <div class="cm-layout">
-                <!-- Left Sidebar: Organizational Groups -->
-                <div class="cm-sidebar">
-                    <div class="cm-sidebar-header">
-                        <h2><i class="bx bx-group"></i> Groups</h2>
-                        <button id="cmAddContactBtn" class="cm-btn primary" title="Add Contact"><i class="bx bx-plus"></i></button>
-                    </div>
-                    <div class="cm-group-list" id="cmGroupList">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <!-- Middle Pane: Contact List -->
-                <div class="cm-list-pane">
-                    <div class="cm-search-bar">
-                        <i class="bx bx-search"></i>
-                        <input type="text" id="cmSearchInput" placeholder="Search contacts or details..." />
-                    </div>
-                    <div class="cm-contact-items" id="cmContactItems">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <!-- Right/Center Pane: Contact View & Comprehensive Edit Form -->
-                <div class="cm-detail-pane" id="cmDetailPane">
-                    <div class="cm-empty-state">
-                        <i class="bx bx-user-pin"></i>
-                        <p>Select a contact to view or edit full vCard attributes.</p>
-                    </div>
-                </div>
-            </div>
-        `;
+			<div class="cm-detail-pane" id="cmDetailPane">
+				<div class="cm-empty-state">
+					<i class="bx bx-user-pin"></i>
+					<p>Select a contact to view or edit full vCard attributes.</p>
+				</div>
+			</div>`;
 
 		// Cache DOM elements
-		this.groupListEl = this.node.querySelector('#cmGroupList') as HTMLElement;
-		this.contactListEl = this.node.querySelector('#cmContactItems') as HTMLElement;
 		this.detailPaneEl = this.node.querySelector('#cmDetailPane') as HTMLElement;
-		this.searchInput = this.node.querySelector('#cmSearchInput') as HTMLInputElement;
-
-		// Bind events
-		this.searchInput.addEventListener('input', () => this.filterAndRender());
-
-		const addBtn = this.node.querySelector('#cmAddContactBtn');
-		addBtn?.addEventListener('click', () => this.createNewContact());
-	}
-
-	private loadSampleContacts(): void
-	{
-		this.contacts = [
-			{
-				uid: 'c-1',
-				categories: 'Engineering',
-				fn: 'Brian James Cullinan',
-				n: 'Cullinan;Brian;James;;',
-				nickname: 'BC',
-				email: 'brian.cullinan@gmail.com',
-				tel: '+1-555-0199',
-				adr: ';;123 Silicon Way;Scottsdale;AZ;85251;USA',
-				title: 'Software Developer',
-				org: 'Pryor Games',
-				role: 'Architect',
-				bday: '1990-01-01',
-				url: 'https://pryor.games',
-				note: 'Specializing in TypeScript, Node.js, and web application architecture.',
-				tz: '-07:00',
-				geo: '33.4942;-111.9261',
-				rev: new Date().toISOString()
-			}
-		];
-		this.renderGroups();
-		this.filterAndRender();
+		this._contactsSidebar = new ContactsSidebar(undefined, {
+			contactsChanged: this.contactsChanged
+		});
+		this.resubscribeSidebar();
 	}
 
 	// --- DropFiles implementation for VCF parsing ---
 	public async dropFiles(files: FileList): Promise<void>
 	{
+		const contacts = [];
 		for(let i = 0; i < files.length; i++)
 		{
 			const file = files[i];
 			const text = await file.text();
-			this.parseVCardString(text);
+			const newItems = ParseVCard.parseVCardString(text);
+			contacts.push(...newItems);
 		}
-		this.renderGroups();
-		this.filterAndRender();
-	}
-
-	private parseVCardString(vcardData: string): void
-	{
-		const cards = vcardData.split('BEGIN:VCARD');
-		cards.forEach(cardText =>
-		{
-			if(!cardText.includes('END:VCARD')) return;
-
-			const getField = (tag: string): string =>
-			{
-				const regex = new RegExp(`^${tag}(?:;[^:]*)?:(.*)$`, 'm');
-				const match = cardText.match(regex);
-				return match ? match[1].trim() : '';
-			};
-
-			const newContact: VCardContact = {
-				uid: 'imp-' + Math.random().toString(36).substring(2, 9),
-				categories: getField('CATEGORIES') || 'Imported',
-				fn: getField('FN') || 'Unnamed Contact',
-				n: getField('N'),
-				nickname: getField('NICKNAME'),
-				email: getField('EMAIL'),
-				tel: getField('TEL'),
-				adr: getField('ADR'),
-				title: getField('TITLE'),
-				org: getField('ORG'),
-				role: getField('ROLE'),
-				bday: getField('BDAY'),
-				url: getField('URL'),
-				note: getField('NOTE'),
-				tz: getField('TZ'),
-				geo: getField('GEO'),
-				rev: new Date().toISOString()
-			};
-
-			this.contacts.push(newContact);
-		});
-	}
-
-	private renderGroups(): void
-	{
-		const groupsMap = new Map<string, number>();
-		groupsMap.set('All', this.contacts.length);
-
-		this.contacts.forEach(c =>
-		{
-			const cat = c.categories || 'Uncategorized';
-			groupsMap.set(cat, (groupsMap.get(cat) || 0) + 1);
-		});
-
-		this.groupListEl.innerHTML = '';
-		groupsMap.forEach((count, groupName) =>
-		{
-			const item = document.createElement('div');
-			item.className = `cm-group-item ${this.selectedGroup === groupName ? 'active' : ''}`;
-			item.innerHTML = `
-                <span><i class="bx bx-folder"></i> ${this.escapeHTML(groupName)}</span>
-                <span class="cm-count">${count}</span>
-            `;
-			item.addEventListener('click', () =>
-			{
-				this.selectedGroup = groupName;
-				this.renderGroups();
-				this.filterAndRender();
-			});
-			this.groupListEl.appendChild(item);
-		});
-	}
-
-	private filterAndRender(): void
-	{
-		const query = this.searchInput.value.toLowerCase();
-
-		this.filteredContacts = this.contacts.filter(c =>
-		{
-			const matchesGroup = this.selectedGroup === 'All' || c.categories === this.selectedGroup;
-			const matchesQuery = c.fn.toLowerCase().includes(query) ||
-				c.email.toLowerCase().includes(query) ||
-				c.org.toLowerCase().includes(query) ||
-				c.tel.toLowerCase().includes(query);
-			return matchesGroup && matchesQuery;
-		});
-
-		this.renderContactList();
-	}
-
-	private renderContactList(): void
-	{
-		this.contactListEl.innerHTML = '';
-		if(this.filteredContacts.length === 0)
-		{
-			this.contactListEl.innerHTML = `<div class="cm-empty-list">No contacts found</div>`;
-			return;
-		}
-
-		this.filteredContacts.forEach(c =>
-		{
-			const isSelected = c.uid === this.selectedContactUid;
-			const card = document.createElement('div');
-			card.className = `cm-contact-card ${isSelected ? 'selected' : ''}`;
-			card.innerHTML = `
-                <div class="cm-avatar">${c.fn.charAt(0).toUpperCase()}</div>
-                <div class="cm-contact-preview">
-                    <span class="cm-name">${this.escapeHTML(c.fn)}</span>
-                    <span class="cm-org">${this.escapeHTML(c.org || c.title || 'No Organization')}</span>
-                </div>
-            `;
-			card.addEventListener('click', () =>
-			{
-				this.selectedContactUid = c.uid;
-				this.isEditing = false;
-				this.renderContactList();
-				this.renderDetailPane();
-			});
-			this.contactListEl.appendChild(card);
-		});
-	}
-
-	private createNewContact(): void
-	{
-		const newC: VCardContact = {
-			uid: 'c-' + Math.random().toString(36).substr(2, 9),
-			categories: this.selectedGroup === 'All' ? 'General' : this.selectedGroup,
-			fn: 'New Contact',
-			n: ';New;;;',
-			nickname: '',
-			email: '',
-			tel: '',
-			adr: ';;;;;;',
-			title: '',
-			org: '',
-			role: '',
-			bday: '',
-			url: '',
-			note: '',
-			tz: '',
-			geo: '',
-			rev: new Date().toISOString()
-		};
-		this.contacts.push(newC);
-		this.selectedContactUid = newC.uid;
-		this.isEditing = true;
-		this.renderGroups();
-		this.filterAndRender();
-		this.renderDetailPane();
+		// this.renderGroups();
+		// this.filterAndRender();
+		this._contactsChanged.emit(contacts);
 	}
 
 	private renderDetailPane(): void
@@ -359,7 +227,7 @@ export class ContactsWidget extends Widget
 
 		this.detailPaneEl.querySelector('#cmExportVcfBtn')?.addEventListener('click', () =>
 		{
-			this.exportSingleVCard(c);
+			ParseVCard.exportSingleVCard(c);
 		});
 
 		this.detailPaneEl.querySelector('#cmDeleteBtn')?.addEventListener('click', () =>
@@ -368,8 +236,9 @@ export class ContactsWidget extends Widget
 			{
 				this.contacts = this.contacts.filter(item => item.uid !== c.uid);
 				this.selectedContactUid = null;
-				this.renderGroups();
-				this.filterAndRender();
+				this._contactsChanged.emit(this.contacts);
+				// this.renderGroups();
+				// this.filterAndRender();
 				this.detailPaneEl.innerHTML = `<div class="cm-empty-state"><i class="bx bx-user-pin"></i><p>Select a contact...</p></div>`;
 			}
 		});
@@ -426,8 +295,7 @@ export class ContactsWidget extends Widget
 
 			c.rev = new Date().toISOString();
 			this.isEditing = false;
-			this.renderGroups();
-			this.filterAndRender();
+			this._contactsChanged.emit([c]);
 			this.renderDetailPane();
 		});
 
@@ -436,41 +304,6 @@ export class ContactsWidget extends Widget
 			this.isEditing = false;
 			this.renderDetailPane();
 		});
-	}
-
-	private exportSingleVCard(c: VCardContact): void
-	{
-		const vcfContent = [
-			'BEGIN:VCARD',
-			'VERSION:3.0',
-			`FN:${c.fn}`,
-			`N:${c.n}`,
-			c.nickname ? `NICKNAME:${c.nickname}` : '',
-			c.email ? `EMAIL:${c.email}` : '',
-			c.tel ? `TEL:${c.tel}` : '',
-			c.adr ? `ADR:${c.adr}` : '',
-			c.org ? `ORG:${c.org}` : '',
-			c.title ? `TITLE:${c.title}` : '',
-			c.role ? `ROLE:${c.role}` : '',
-			c.bday ? `BDAY:${c.bday}` : '',
-			c.url ? `URL:${c.url}` : '',
-			c.note ? `NOTE:${c.note}` : '',
-			c.categories ? `CATEGORIES:${c.categories}` : '',
-			c.tz ? `TZ:${c.tz}` : '',
-			c.geo ? `GEO:${c.geo}` : '',
-			`REV:${c.rev}`,
-			`UID:${c.uid}`,
-			'END:VCARD'
-		].filter(Boolean).join('\r\n');
-
-		const blob = new Blob([vcfContent], { type: 'text/vcard;charset=utf-8' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${c.fn.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.vcf`;
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
 	}
 
 	private escapeHTML(str: string): string

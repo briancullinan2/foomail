@@ -1,5 +1,6 @@
 .lumino-email-manager {
 	display: flex;
+	flex-direction: column;
 	width: 100%;
 	height: 100%;
 	/* background-color: #0f172a;
@@ -7,6 +8,7 @@
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; */
 	box-sizing: border-box;
 	overflow: hidden;
+	padding: 2rem;
 }
 
 .lumino-email-manager *,
@@ -52,6 +54,9 @@
 	flex-direction: column;
 	gap: 0.25rem;
 	border-bottom: 1px solid #1f2937;
+	flex-shrink: 1;
+	flex-grow: 1;
+	min-height: 20%;
 }
 
 .em-section-title {
@@ -65,10 +70,14 @@
 	gap: 0.35rem;
 }
 
+.em-nav-item>*:nth-child(2) {
+	flex-basis: 100%;
+}
+
 .em-nav-item {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	padding: 0.55rem 0.75rem;
 	border-radius: 6px;
 	cursor: pointer;
@@ -77,10 +86,11 @@
 	transition: all 0.2s;
 }
 
-.em-nav-item i {
+.em-nav-item>i {
 	display: flex;
 	align-items: center;
 	gap: 0.6rem;
+	margin: 0 10px 0 0;
 }
 
 .em-nav-item:hover {
@@ -143,14 +153,19 @@
 }
 
 .em-search-bar {
-	padding: 0.85rem 1rem;
+	padding: 0.75rem;
 	border-bottom: 1px solid #1f2937;
 	position: relative;
 	display: flex;
 	align-items: center;
 }
 
-.em-search-bar i {
+.em-search-bar>button {
+	margin: 0 0 0 10px;
+}
+
+
+.em-search-bar>i {
 	position: absolute;
 	left: 18px;
 	color: #94a3b8;
@@ -158,7 +173,7 @@
 
 .em-search-bar input {
 	width: 100%;
-	padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+	padding: 0.45rem 0.75rem 0.45rem 1.25rem;
 	background: #1e293b;
 	border: 1px solid #334155;
 	color: #fff;
@@ -178,6 +193,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+	flex-shrink: 1;
+	flex-grow: 1;
+	flex-basis: 100%;
 }
 
 .em-message-card {

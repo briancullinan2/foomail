@@ -37,6 +37,7 @@ export class TasksWidget extends Widget
 		super();
 		this.title.label = title ?? 'Task List';
 		this.title.iconClass = 'bx bx-task';
+		this.title.closable = true;
 		this.addClass('lumino-task-gantt');
 		this.initDOM();
 		this.loadSampleObligations();
