@@ -68,8 +68,9 @@ export class EmailWidget extends Widget
 	}
 
 
-	protected onAfterAttach(): void
+	protected override onAfterAttach(msg: Message): void
 	{
+		super.onAfterAttach(msg);
 		if(this._emailsSidebar && !this._emailsSidebar.isAttached)
 		{
 			this.openSidebar();

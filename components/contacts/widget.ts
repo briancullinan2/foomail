@@ -50,8 +50,9 @@ export class ContactsWidget extends Widget
 		this.initDOM();
 	}
 
-	protected onAfterAttach(): void
+	protected override onAfterAttach(msg: Message): void
 	{
+		super.onAfterAttach(msg);
 		if(this._contactsSidebar && !this._contactsSidebar.isAttached)
 		{
 			this.openSidebar();

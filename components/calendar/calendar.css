@@ -400,3 +400,288 @@
 .calendar-more-bar:hover .event-popover {
 	display: block;
 }
+
+/* --- Google Calendar Sidebar Widget Styles --- */
+
+.cal-sidebar-container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	background-color: var(--jp-layout-color1, #1e1e1e);
+	color: var(--jp-ui-font-color1, #cccccc);
+	font-family: var(--jp-ui-font-family, sans-serif);
+	font-size: 13px;
+	padding: 12px;
+	box-sizing: border-box;
+	overflow-y: auto;
+}
+
+/* Action Bar (Create & Remote Add) */
+.cal-action-bar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.cal-btn-create {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background-color: #1a73e8;
+	color: #ffffff;
+	border: none;
+	border-radius: 24px;
+	padding: 10px 16px;
+	font-weight: 500;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.cal-btn-create:hover {
+	background-color: #1557b0;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.cal-btn-icon {
+	background: transparent;
+	border: 1px solid var(--jp-border-color2, #444444);
+	color: var(--jp-ui-font-color1, #cccccc);
+	border-radius: 50%;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.cal-btn-icon:hover {
+	background-color: var(--jp-layout-color2, #2a2a2a);
+}
+
+/* Search Bar */
+.cal-search-bar {
+	display: flex;
+	align-items: center;
+	background-color: var(--jp-layout-color2, #2a2a2a);
+	border-radius: 8px;
+	padding: 0 10px;
+	margin-bottom: 16px;
+	border: 1px solid transparent;
+	transition: border-color 0.2s;
+}
+
+.cal-search-bar:focus-within {
+	border-color: #1a73e8;
+}
+
+.cal-search-bar i {
+	color: var(--jp-ui-font-color3, #888888);
+	margin-right: 8px;
+}
+
+.cal-search-bar input {
+	background: transparent;
+	border: none;
+	outline: none;
+	color: inherit;
+	font-size: 13px;
+	width: 100%;
+	padding: 8px 0;
+}
+
+/* Mini Month Calendar Picker */
+.cal-mini-picker {
+	background-color: var(--jp-layout-color2, #252525);
+	border-radius: 12px;
+	padding: 12px;
+	margin-bottom: 20px;
+}
+
+.cal-mini-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.cal-mini-title {
+	font-weight: 600;
+	font-size: 12px;
+}
+
+.cal-mini-nav {
+	display: flex;
+	gap: 4px;
+}
+
+.cal-mini-nav button {
+	background: transparent;
+	border: none;
+	color: var(--jp-ui-font-color1, #cccccc);
+	cursor: pointer;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.cal-mini-nav button:hover {
+	background-color: var(--jp-layout-color3, #333333);
+}
+
+.cal-mini-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+	text-align: center;
+}
+
+.cal-day-lbl {
+	font-size: 10px;
+	color: var(--jp-ui-font-color3, #888888);
+	font-weight: 600;
+	padding-bottom: 4px;
+}
+
+.cal-day {
+	aspect-ratio: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	border-radius: 50%;
+	cursor: pointer;
+	user-select: none;
+}
+
+.cal-day:not(.empty):hover {
+	background-color: var(--jp-layout-color3, #3a3a3a);
+}
+
+.cal-day.today {
+	background-color: #1a73e8;
+	color: #ffffff;
+	font-weight: bold;
+}
+
+.cal-day.empty {
+	pointer-events: none;
+}
+
+/* Section Header & File Drop */
+.cal-section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-weight: 600;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--jp-ui-font-color2, #aaaaaa);
+	margin-bottom: 8px;
+	padding: 0 4px;
+}
+
+.cal-drop-zone-label {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: #1a73e8;
+	font-size: 12px;
+	transition: opacity 0.2s;
+}
+
+.cal-drop-zone-label:hover {
+	opacity: 0.8;
+}
+
+/* Calendar List & Checkboxes */
+.cal-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.cal-list-item {
+	padding: 6px 8px;
+	border-radius: 6px;
+	transition: background-color 0.2s;
+}
+
+.cal-list-item:hover {
+	background-color: var(--jp-layout-color2, #252525);
+}
+
+.cal-checkbox-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	width: 100%;
+	position: relative;
+}
+
+.cal-checkbox-wrapper input[type="checkbox"] {
+	position: absolute;
+	opacity: 0;
+	cursor: pointer;
+	height: 0;
+	width: 0;
+}
+
+/* Custom Checkbox Design matching Google Calendar colors */
+.cal-checkmark {
+	position: relative;
+	height: 16px;
+	width: 16px;
+	background-color: transparent;
+	border: 2px solid var(--cal-color, #1a73e8);
+	border-radius: 4px;
+	transition: background-color 0.2s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.cal-checkbox-wrapper input:checked~.cal-checkmark {
+	background-color: var(--cal-color, #1a73e8);
+}
+
+.cal-checkmark:after {
+	content: "";
+	position: absolute;
+	display: none;
+	left: 4px;
+	top: 1px;
+	width: 4px;
+	height: 8px;
+	border: solid white;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+.cal-checkbox-wrapper input:checked~.cal-checkmark:after {
+	display: block;
+}
+
+.cal-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+	color: var(--jp-ui-font-color1, #cccccc);
+}
+
+.cal-remote-icon {
+	font-size: 12px;
+	color: var(--jp-ui-font-color3, #888888);
+}
