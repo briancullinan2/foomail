@@ -1,0 +1,390 @@
+.lumino-contact-manager {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	background-color: #0f172a;
+	color: #f8fafc;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.lumino-contact-manager *,
+.lumino-contact-manager *::before,
+.lumino-contact-manager *::after {
+	box-sizing: border-box;
+}
+
+.cm-layout {
+	display: flex;
+	width: 100%;
+	height: 100%;
+}
+
+/* Sidebar Groups */
+.cm-sidebar {
+	width: 240px;
+	background: #111827;
+	border-right: 1px solid #1f2937;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-sidebar-header {
+	padding: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px solid #1f2937;
+}
+
+.cm-sidebar-header h2 {
+	margin: 0;
+	font-size: 1rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.cm-group-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.cm-group-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+	cursor: pointer;
+	color: #94a3b8;
+	font-size: 0.875rem;
+	transition: all 0.2s;
+}
+
+.cm-group-item:hover {
+	background: #1e293b;
+	color: #f8fafc;
+}
+
+.cm-group-item.active {
+	background: #1e293b;
+	color: #38bdf8;
+	font-weight: 500;
+}
+
+.cm-count {
+	background: #334155;
+	color: #f8fafc;
+	font-size: 0.7rem;
+	padding: 0.1rem 0.4rem;
+	border-radius: 10px;
+}
+
+/* Middle Contact List Pane */
+.cm-list-pane {
+	width: 320px;
+	border-right: 1px solid #1f2937;
+	display: flex;
+	flex-direction: column;
+	background: #0f172a;
+}
+
+.cm-search-bar {
+	padding: 0.85rem 1rem;
+	border-bottom: 1px solid #1f2937;
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.cm-search-bar i {
+	position: absolute;
+	left: 18px;
+	color: #94a3b8;
+}
+
+.cm-search-bar input {
+	width: 100%;
+	padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+	background: #1e293b;
+	border: 1px solid #334155;
+	color: #fff;
+	border-radius: 6px;
+	font-size: 0.875rem;
+	outline: none;
+}
+
+.cm-search-bar input:focus {
+	border-color: #38bdf8;
+}
+
+.cm-contact-items {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.cm-contact-card {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.65rem 0.75rem;
+	background: #1e293b;
+	border-radius: 8px;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: all 0.2s;
+}
+
+.cm-contact-card:hover {
+	background: #273548;
+}
+
+.cm-contact-card.selected {
+	border-color: #38bdf8;
+	background: #1e293b;
+}
+
+.cm-avatar {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	background: #0284c7;
+	color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 1rem;
+}
+
+.cm-contact-preview {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.cm-name {
+	font-size: 0.875rem;
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.cm-org {
+	font-size: 0.75rem;
+	color: #94a3b8;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Detail & Edit Pane */
+.cm-detail-pane {
+	flex: 1;
+	background: #0f172a;
+	padding: 2rem;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-empty-state {
+	margin: auto;
+	text-align: center;
+	color: #64748b;
+}
+
+.cm-empty-state i {
+	font-size: 4rem;
+	margin-bottom: 1rem;
+}
+
+.cm-detail-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid #1f2937;
+	padding-bottom: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.cm-detail-title-group {
+	display: flex;
+	align-items: center;
+	gap: 1.25rem;
+}
+
+.cm-large-avatar {
+	width: 60px;
+	height: 60px;
+	border-radius: 50%;
+	background: #0284c7;
+	color: #fff;
+	font-size: 1.75rem;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.cm-detail-title-group h2 {
+	margin: 0 0 0.25rem 0;
+	font-size: 1.5rem;
+}
+
+.cm-subtitle {
+	color: #94a3b8;
+	font-size: 0.875rem;
+}
+
+.cm-detail-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.cm-btn {
+	background: #334155;
+	border: none;
+	color: #f8fafc;
+	padding: 0.5rem 1rem;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	transition: background 0.2s;
+}
+
+.cm-btn:hover {
+	background: #475569;
+}
+
+.cm-btn.primary {
+	background: #0284c7;
+}
+
+.cm-btn.primary:hover {
+	background: #0369a1;
+}
+
+.cm-btn.danger {
+	background: #7f1d1d;
+	color: #fca5a5;
+}
+
+.cm-btn.danger:hover {
+	background: #991b1b;
+}
+
+.cm-attributes-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 1.5rem;
+}
+
+.cm-attr-group {
+	background: #1e293b;
+	border: 1px solid #334155;
+	padding: 1.25rem;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.cm-attr-group.full-width {
+	grid-column: 1 / -1;
+}
+
+.cm-attr-group h3 {
+	margin: 0 0 0.5rem 0;
+	font-size: 0.95rem;
+	color: #38bdf8;
+	border-bottom: 1px solid #334155;
+	padding-bottom: 0.5rem;
+}
+
+.cm-attr-group div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.cm-attr-group label {
+	font-size: 0.75rem;
+	color: #94a3b8;
+	font-weight: 500;
+}
+
+.cm-attr-group span,
+.cm-attr-group p {
+	font-size: 0.875rem;
+	color: #f8fafc;
+	margin: 0;
+	word-break: break-word;
+}
+
+.cm-tag {
+	background: rgba(56, 189, 248, 0.15);
+	color: #38bdf8;
+	padding: 0.15rem 0.5rem;
+	border-radius: 4px;
+	width: fit-content;
+	font-weight: 500;
+}
+
+/* Edit Form Styles */
+.cm-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1rem;
+}
+
+.cm-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.cm-field.full-width {
+	grid-column: 1 / -1;
+}
+
+.cm-field label {
+	font-size: 0.75rem;
+	color: #94a3b8;
+	font-weight: 500;
+}
+
+.cm-field input,
+.cm-field textarea {
+	background: #1e293b;
+	border: 1px solid #334155;
+	color: #fff;
+	padding: 0.55rem 0.75rem;
+	border-radius: 6px;
+	font-size: 0.875rem;
+	outline: none;
+}
+
+.cm-field input:focus,
+.cm-field textarea:focus {
+	border-color: #38bdf8;
+}
+
+.cm-field textarea {
+	resize: vertical;
+	min-height: 80px;
+}

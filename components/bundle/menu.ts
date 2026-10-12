@@ -49,12 +49,53 @@ export interface ComponentRoute
 }
 
 // 1. Unified metadata tree tracking every panel type and icon token
+
 export const MODULE_REGISTRY: Record<string, ComponentRoute> = {
 	'collapse': {
 		label: 'Collapse',
 		iconClass: 'bx bx-arrow-in-left-square-half',
 		subtext: 'Requires Lumino DockPanel container references and UI state layout persistence.',
 		description: 'Collapses active sidebars or secondary workspace panels to maximize primary viewing space across media and storage widgets.'
+	},
+	'email': {
+		label: 'My Email',
+		url: './components/email/widget.ts',
+		className: 'EmailWidget',
+		iconClass: 'bx bx-envelope',
+		subtext: 'Depends on IMAP/SMTP transport layers, HTML DOM sanitizers, and thread-grouping parser modules.',
+		description: 'A full-featured webmail interface providing inbox synchronization, rich-text drafting, message searching, and attachment preview capabilities.'
+	},
+	'calendar': {
+		label: 'Schedule/Calendar',
+		url: './components/calendar/widget.ts',
+		className: 'CalendarWidget',
+		iconClass: 'bx bx-calendar-alt',
+		subtext: 'Depends on iCal/rrule parsing algorithms, timezone offset resolvers, and drag-and-drop event dispatcher utilities.',
+		description: 'An interactive multi-view calendar widget for scheduling events, managing recurring appointments, and tracking timeline deadlines.'
+	},
+	'contacts': {
+		label: 'Contacts List',
+		url: './components/contacts/widget.ts',
+		className: 'ContactsWidget',
+		iconClass: 'bx bx-group',
+		subtext: 'Depends on vCard serialization drivers, fuzzy-search string matching, and indexed contact storage schema.',
+		description: 'A centralized address book interface for organizing contacts, managing communication metadata, and exporting vCard profiles.'
+	},
+	'tasks': {
+		label: 'Tasks List',
+		url: './components/tasks/widget.ts',
+		className: 'TasksWidget',
+		iconClass: 'bx bx-task',
+		subtext: 'Depends on state state-machine transitions, local priority sorting heuristics, and task dependency graph resolvers.',
+		description: 'A task and to-do list manager supporting task categorization, priority tags, completion tracking, and sub-task nesting.'
+	},
+	'notes': {
+		label: 'Notes/Journal',
+		url: './components/notes/widget.ts',
+		className: 'NotesWidget',
+		iconClass: 'bx bx-note-book',
+		subtext: 'Depends on Markdown/WYSIWYG AST parsers, local storage persistence hooks, and document tree models.',
+		description: 'A personal notebook and journaling workspace supporting rich text formatting, tag indexing, and instant autosave drafts.'
 	},
 	'searchlist': {
 		label: 'Search Files',
@@ -64,175 +105,205 @@ export const MODULE_REGISTRY: Record<string, ComponentRoute> = {
 		subtext: 'Depends on indexed search database endpoints, debounced input triggers, and query-parsing regex modules.',
 		description: 'An indexed filesystem search interface that queries local and remote metadata to rapidly retrieve shared media files, audio tracks, and archives.'
 	},
-	'fileview': {
-		label: 'Shared Files',
-		url: './components/fileview/widget.ts',
-		className: 'FileviewWidget',
-		iconClass: 'bx bx-folder-code',
-		subtext: 'Requires SOCKS5/WebSocket stream proxies, local directory access APIs, and virtualized tree rendering contexts.',
-		description: 'A browser-based remote filesystem explorer enabling secure browsing, directory sharing, and file operations across distributed network storage nodes.'
-	},
-	'music': {
-		label: 'Music',
-		url: './components/music/widget.ts',
-		className: 'MusicWidget',
-		iconClass: 'bx bx-music',
-		subtext: 'Depends on Web Audio API, dynamic audio element binding, visualizer engine hooks, and crossfade timing managers.',
-		description: 'A high-performance audio engine and playlist player supporting seamless track crossfading, audio visualization, and stream playback from remote storage.'
-	},
-	'photos': {
-		label: 'Photos',
-		url: './components/photo/widget.ts',
-		className: 'PhotoWidget',
-		iconClass: 'bx bx-camera-alt',
-		subtext: 'Requires HTML5 Image canvas decoders, EXIF metadata extraction modules, and client-side thumbnail caching stores.',
-		description: 'A photo collection browser equipped with EXIF inspection, high-resolution previewing, and slideshow controls for indexed photographic libraries.'
-	},
-	'images': {
-		label: 'Images',
-		url: './components/image/widget.ts',
-		className: 'ImageWidget',
-		iconClass: 'bx bx-image',
-		subtext: 'Operates via CSS carousel drivers, pan/zoom canvas handlers, and multi-format raster/vector image readers.',
-		description: 'A interactive image viewer supporting multi-directional carousel transitions, responsive image sliders, and deep-zoom inspection for remote asset stores.'
-	},
-	'videos': {
-		label: 'Videos',
-		url: './components/video/widget.ts',
-		className: 'VideoWidget',
-		iconClass: 'bx bx-video',
-		subtext: 'Depends on HTML5 Video API, Media Source Extensions (MSE), and WebSocket telemetry streams for adaptive playback.',
-		description: 'A versatile video streaming player capable of handling short clips, web-shared recordings, and adaptive stream sources with custom playback controls.'
-	},
-	'movies': {
-		label: 'Movies',
-		url: './components/movie/widget.ts',
-		className: 'MovieWidget',
-		iconClass: 'bx bx-movie',
-		subtext: 'Integrates with TMDB/IMDb scrapers, server-side FFmpeg transcode queues, and HTTP Range request handlers.',
-		description: 'A cinematic media library interface featuring automated metadata matching, real-time transcoding streams, and full movie playback controls.'
-	},
-	'games': {
-		label: 'Games',
-		url: './components/game/widget.ts',
-		className: 'GameWidget',
-		iconClass: 'bx bx-joystick',
-		subtext: 'Requires WebAssembly (WASM) emulator runtimes, WebGL render target canvases, and Gamepad API event listeners.',
-		description: 'An embedded web execution environment and browser-based emulator dashboard for launching, streaming, and interacting with remote game assets.'
-	},
-
-	// 'database': {
-	//   label: 'Local Database',
-	//   url: './components/filelist/widget-database.ts',
-	//   className: 'DatabaseListWidget',
-	//   iconClass: 'bx bx-database',
-	//   subtext: 'Requires IndexedDB storage adapters, local SQLite WASM bindings, and automated schema migration scripts.',
-	//   description: 'A client-side persistent storage inspector for tracking local file indices, media caches, and offline synchronization states.'
-	// },
 	'tools': {
-		label: 'Tools',
+		label: 'More Tools',
 		url: './components/tools/widget.ts',
 		className: 'ToolsWidget',
-		iconClass: 'bx bx-rename',
-		subtext: 'Relies on system subprocess execution bridges, batch processing queues, and external automation service RPCs.',
-		description: 'A centralized utility hub housing torrent procurement engines, transcode queue monitors, file renamers, and automated background media tools.'
+		iconClass: 'bx bx-spanner',
+		subtext: 'Integrates PK3/ZIP extraction pipelines, package resolution managers, SOCKS5/UDP proxy tunnels, and WASM/Emscripten runners.',
+		description: 'A multi-tool drawer housing automated asset mirrors, package managers, proxy tunnel configurations, and engine diagnostic utilities.'
 	},
-	// 'settings': {
-	//   label: 'Edit Settings',
-	//   url: './components/editor/widget-settings.ts',
-	//   className: 'SettingsWidget',
-	//   iconClass: 'bx bx-gear',
-	//   subtext: 'Depends on local storage key-value stores, JSON configuration schemas, and live application theme managers.',
-	//   description: 'A application configuration panel for managing transcode presets, remote network bindings, storage paths, and UI preferences.'
-	// },
 };
 
 
 menuSelf.MODULE_REGISTRY = MODULE_REGISTRY;
 
 export const TOOLS_REGISTRY: Record<string, ComponentRoute> = {
-	'torrent': {
-		label: 'Torrents',
-		url: './components/tools/widget-torrent.ts',
-		className: 'TorrentWidget',
-		iconClass: 'bx bx-archive-arrow-down',
-		subtext: 'Requires WebTorrent / libtorrent Node native binding, DHT/P2P Socket layer, active TCP/UDP ports 6881-6889, and Local Storage session persistence.',
-		description: 'An automated peer-to-peer file acquisition system designed to coordinate high-speed swarm downloads, parse magnet URIs, verify piece integrity, and orchestrate torrent lifecycle management.'
+	'servers': {
+		label: 'Server Settings',
+		url: './components/email/widget-servers.ts',
+		className: 'ServerSettingsWidget',
+		iconClass: 'bx bx-server',
+		subtext: 'Depends on IMAP/SMTP/POP3 protocol configuration stores, secure credential vault, and connection health ping loops.',
+		description: 'A server configuration panel for managing remote mail servers, configuring incoming/outgoing host endpoints, testing port connectivity, and handling authentication credentials.'
 	},
-	'nzb': {
-		label: 'NZB & Usenet',
-		url: './components/tools/widget-nzb.ts',
-		className: 'NzbWidget',
-		iconClass: 'bx bx-news',
-		subtext: 'Depends on TLS/SSL NNTP socket transport, SABnzbd or NZBGet RPC endpoints, PAR2 repair utilities, and multi-part RAR decoding libraries.',
-		description: 'A multi-threaded Usenet client manager capable of parsing XML-based NZB index files, assembling split binary segments across high-bandwidth NNTP connections, and running automated file repairs.'
+	'keystore': {
+		label: 'Keystore Manager',
+		url: './components/keystore/widget.ts',
+		className: 'KeystoreWidget',
+		iconClass: 'bx bx-key',
+		subtext: 'Depends on IndexedDB encrypted blob stores, WebCrypto subtle encryption APIs, PIN verification overlays, and credential form-autofill parsers.',
+		description: 'A secure vault manager providing PIN-protected credential storage, customizable form-field autofill mapping, drag-and-drop file ingestion (CSV, JSON, HTML, API keys), and encrypted export backups.'
 	},
-	'ripper': {
-		label: 'Movie Finder',
-		url: './components/tools/widget-movies.ts',
-		className: 'MoviesWidget',
-		iconClass: 'bx bx-film',
-		subtext: 'Integrates with TMDB / IMDb REST APIs, Radarr API v3, OMDb metadata scrapers, and fuzzy string-matching regex modules.',
-		description: 'An intelligent cinematic media crawler that queries indexers for releases, analyzes metadata profiles against media quality rules, and automatically matches releases with high-accuracy IMDB metadata.'
+	'folders': {
+		label: 'Watched Folders',
+		url: './components/assets/widget-settings.ts',
+		className: 'FolderWizardWidget',
+		iconClass: 'bx bx-folder-check',
+		subtext: 'Powered by cross-platform OS special path presets, File System Access API directory pickers, and middleware watcher synchronization.',
+		description: 'An interactive configuration wizard to manage virtual database folder mappings, monitor local storage availability, and sync directories with backend watchers.'
 	},
-	'tv': {
-		label: 'TV Subscriptions',
-		url: './components/tools/widget-tv.ts',
-		className: 'TvWidget',
-		iconClass: 'bx bx-tv',
-		subtext: 'Relies on TVDB API v4, Sonarr GraphQL/REST interfaces, MyEpisodes RSS feed authentication, and cron scheduling daemons.',
-		description: 'A comprehensive episodic television management engine that tracks release schedules, orchestrates series monitoring, and synchronizes watch history across third-party tracking portals.'
+	'groups': {
+		label: 'Groups Manager',
+		url: './components/groups/widget.ts',
+		className: 'GroupsWidget',
+		iconClass: 'bx bx-community',
+		subtext: 'Depends on role-based access control (RBAC) handlers, user relationship trees, and directory sync endpoints.',
+		description: 'A management panel for organizing user memberships, configuring team permissions, and establishing shared resource access policies.'
 	},
-	'renamer': {
-		label: 'Batch Renamer',
-		url: './components/tools/widget-renamer.ts',
-		className: 'RenamerWidget',
-		iconClass: 'bx bx-rename',
-		subtext: 'Uses Node.js `fs-extra` module, cross-platform POSIX path utilities, custom template engine parsing, and dry-run diffing pipelines.',
-		description: 'A structural batch file organization tool that parses raw filenames into normalized naming schemas, handles multi-directory relocation, and executes instant filesystem renames.'
+	'news': {
+		label: 'News Subscriptions',
+		url: './components/news/widget.ts',
+		className: 'NewsWidget',
+		iconClass: 'bx bx-newspaper',
+		subtext: 'Depends on RSS/Atom XML feed parsers, image caching proxies, and article summary extraction modules.',
+		description: 'A customizable RSS/Atom feed reader for aggregating external news feeds, article updates, and content channels in real time.'
 	},
-	'tagger': {
-		label: 'ID3 Tag Editor',
-		url: './components/tools/widget-tagger.ts',
-		className: 'TaggerWidget',
-		iconClass: 'bx bx-price-tag-alt',
-		subtext: 'Requires `node-id3`, `music-metadata` parser engine, FFmpeg audio probe bindings, and embedded cover art buffer readers.',
-		description: 'An advanced audio metadata editor built to inspect, extract, and write ID3v2 tags, embedded album artwork, variable bitrate headers, and canonical track metadata directly into audio streams.'
+	'chat': {
+		label: 'Chat/Forum',
+		url: './components/chat/widget.ts',
+		className: 'ChatWidget',
+		iconClass: 'bx bx-discussion',
+		subtext: 'Depends on WebSocket real-time event sockets, active user presence monitors, and message stream buffer managers.',
+		description: 'A real-time messaging panel for instant multi-user communication, channel discussions, direct messaging, and media sharing.'
 	},
-	'status': {
-		label: 'Transcoder Queue',
-		url: './components/status/widget.ts',
-		className: 'WorkerStatusWidget',
-		iconClass: 'bx bx-cog',
-		subtext: 'Operates via BullMQ / Redis message broker, WebWorker thread pool poolers, FFmpeg CLI subprocess runners, and WebSocket telemetry status frames.',
-		description: 'A dynamic background task monitor that provides real-time oversight for hardware-accelerated video transcoding, worker health metrics, queue priority distribution, and stream encoding pipelines.'
+	'campaign': {
+		label: 'Campaign Builder',
+		url: './components/email/widget-campaign.ts',
+		className: 'CampaignWidget',
+		iconClass: 'bx bx-paper-plane',
+		subtext: 'Depends on LightGraph visual node layout engine, drip triggers, A/B split routing, and web-hook automation pipelines.',
+		description: 'An enterprise marketing automation builder (similar to Eloqua or Oracle Responsys) using a visual workflow graph to orchestrate drip campaigns, dynamic segmentation, and event-driven email journeys.'
 	},
-	'github': {
-		label: 'Github Commit',
-		url: './components/filelist/widget-github.ts',
-		className: 'GithubListWidget',
-		iconClass: 'bx bx-git-repo-forked',
-		subtext: 'Requires GitHub REST/GraphQL API tokens, simple-git subprocess wrapper, SSH key agent credentials, and git-log JSON parsers.',
-		description: 'A repository history and version control dashboard that tracks commit trees, diff histories, remote pull requests, and automated sync events across local and remote repositories.'
+	'signature': {
+		label: 'Signature Editor',
+		url: './components/email/widget-signature.ts',
+		className: 'SignatureWidget',
+		iconClass: 'bx bx-pen',
+		subtext: 'Depends on inline CSS inliners, HTML DOM sanitizers, dynamic LDAP/vCard token injectors, and rich canvas previews.',
+		description: 'A WYSIWYG email signature manager for creating cross-client HTML signatures, social icon badges, and corporate disclaimers with placeholder variables.'
+	},
+	'source': {
+		label: 'Source Inspector',
+		url: './components/editor/widget-source.ts',
+		className: 'SourceInspectorWidget',
+		iconClass: 'bx bx-code-alt',
+		subtext: 'Depends on Ace9 editor instance bindings, raw MIME/RFC-822 header decoders, and syntax highlighting AST lexers.',
+		description: 'An raw code inspector powered by the Ace9 editor for analyzing raw email headers, validating HTML/CSS markup, debugging MIME parts, and editing template source directly.'
+	},
+	'backup': {
+		label: 'Email Backup',
+		url: './components/email/widget-backup.ts',
+		className: 'EmailBackupWidget',
+		iconClass: 'bx bx-hard-drive',
+		subtext: 'Depends on MBOX/EML binary serializers, incremental compression streams (gzip/tar), and IndexedDB blob persistence.',
+		description: 'A local archival utility for generating compressed MBOX/EML backups of local and remote mailboxes, folder structures, and attachments.'
+	},
+	'recovery': {
+		label: 'Email Recovery',
+		url: './components/email/widget-recovery.ts',
+		className: 'EmailRecoveryWidget',
+		iconClass: 'bx bx-history',
+		subtext: 'Depends on file stream readers, orphan block reconstruction, corrupted header repair modules, and state rollback diffing.',
+		description: 'A disaster recovery utility for restoring archived mail archives, parsing damaged `.eml` files, and re-indexing lost folder trees back into the client storage.'
+	},
+	'trash': {
+		label: 'Deleted Items',
+		url: './components/email/widget-trash.ts',
+		className: 'EmailTrashWidget',
+		iconClass: 'bx bx-trash',
+		subtext: 'Depends on soft-delete retention schedules, batch storage cleanup workers, and IMAP EXPUNGE sync handlers.',
+		description: 'A dedicated trash manager and storage retention monitor for permanently purging expired messages, recovering accidentally deleted threads, and clearing cached attachments.'
+	},
+	'pgp': {
+		label: 'PGP Encryption',
+		url: './components/email/widget-pgp.ts',
+		className: 'PGPConfigWidget',
+		iconClass: 'bx bx-key',
+		subtext: 'Depends on OpenPGP.js WebAssembly crypto bindings, keypair generator routines, WebCrypto APIs, and WKD endpoints.',
+		description: 'An end-to-end PGP key manager for generating RSA/ECC key pairs, configuring public key web key directories (WKD), signing outgoing mail, and encrypting internal message stores.'
+	},
+	'profile': {
+		label: 'Public Directory',
+		url: './components/email/widget-public-directory.ts',
+		className: 'PublicDirectoryWidget',
+		iconClass: 'bx bx-user-id-card',
+		subtext: 'Depends on public key broadcasting protocol adapters, user profile schemas, and decentralized key lookup servers.',
+		description: 'A public broadcast server directory and user profile page viewer for hosting user public keys, verified signatures, avatar metadata, and security certificates.'
+	},
+	'users': {
+		label: 'User Profiles',
+		url: './components/email/widget-users.ts',
+		className: 'UserProfilesWidget',
+		iconClass: 'bx bx-card-view-tiles',
+		subtext: 'Depends on local storage identity stores, multi-account IMAP/OAuth token managers, and state switching listeners.',
+		description: 'A local profile manager for organizing multiple user identities, switching SMTP senders, managing local credentials, and scoping individual mailbox databases.'
+	},
+	'templates': {
+		label: 'Template Library',
+		url: './components/email/widget-templates.ts',
+		className: 'TemplateLibraryWidget',
+		iconClass: 'bx bx-layout',
+		subtext: 'Depends on Liquid/Handlebars string interpolation engines, responsive layout preview frames, and snippet asset registries.',
+		description: 'A repository for managing reusable HTML email templates, dynamic layout blocks, responsive email frames, and automated transactional message patterns.'
+	},
+	'analytics': {
+		label: 'Email Analytics',
+		url: './components/email/widget-analytics.ts',
+		className: 'EmailAnalyticsWidget',
+		iconClass: 'bx bx-chart-trend',
+		subtext: 'Depends on tracking pixel log aggregators, link click counter endpoints, and client-side Chart.js renderers.',
+		description: 'A dashboard tracking email deliverability rates, open/click metrics, unsubscribe counters, and visual campaign performance statistics.'
+	},
+	'spam': {
+		label: 'Spam Filter',
+		url: './components/email/widget-spam.ts',
+		className: 'SpamGuardWidget',
+		iconClass: 'bx bx-shield-quarter',
+		subtext: 'Depends on SpamAssassin heuristic rulesets, Naive Bayes classifier workers, and DKIM/SPF/DMARC DNS record validators.',
+		description: 'A security guard that checks incoming message headers against SPF/DKIM validation rules, executes client-side spam heuristics, and manages blocklists.'
+	},
+	'filelist': {
+		label: 'Engine Files',
+		url: './components/filelist/widget.ts',
+		className: 'FileListWidget',
+		iconClass: 'bx bx-folder-code',
+		subtext: 'Depends on File System Access API handles, virtual file tree nodes, and binary stream read/write pipelines.',
+		description: 'A comprehensive file manager widget for browsing local or remote project workspaces, inspecting file trees, and performing file operations.'
+	},
+	'settings': {
+		label: 'Edit Settings',
+		url: './components/editor/widget-settings.ts',
+		className: 'SettingsWidget',
+		iconClass: 'bx bx-gear',
+		subtext: 'Depends on schema validation transformers, JSON configuration stores, and reactive theme/preference listeners.',
+		description: 'A configuration panel allowing users to customize UI theme preferences, keybindings, network endpoints, and system parameters.'
 	},
 	'terminal-container': {
 		label: 'Show Console',
 		url: './components/terminal/widget.ts',
 		className: 'TerminalWidget',
 		iconClass: 'bx bx-terminal',
-		subtext: 'Powered by Xterm.js canvas rendering context, WebSocket pty gateway daemon, UTF-8 streaming codecs, and node-pty process forks.',
-		description: 'An embedded interactive terminal emulator offering full pseudo-terminal (PTY) capabilities, customizable color themes, shell execution, and live stdout/stderr stream monitoring.'
+		subtext: 'Depends on xterm.js or ANSI escape sequence decoders, Virtual PTY web sockets, and command history buffers.',
+		description: 'An embedded terminal emulator interface providing interactive command-line access, execution logs, and PTY session management.'
 	},
 	'graph': {
 		label: 'Workflow Graph',
 		url: './components/graph/widget.ts',
 		className: 'LightGraphWidget',
 		iconClass: 'bx bx-chart-stacked-rows',
-		subtext: 'Built on Canvas2D / WebGL rendering context, LightGraph.js node engine, DAG execution pipelines, and JSON graph serialization formats.',
-		description: 'A visual node-based execution canvas for orchestrating media pipelines, connecting step-by-step automation workflows, and visually inspecting event-driven data flow branches.'
-	}
+		subtext: 'Depends on LightGraph layout engines, HTML5/WebGL node render loops, and serialization graph topologies.',
+		description: 'A visual node-based workflow graph editor for wiring execution pipelines, data flow paths, and modular visualizer connections.'
+	},
+	'bookmarks': {
+		label: 'Bookmark Merge',
+		url: './components/bookmarks/widget.ts',
+		className: 'BookmarksWidget',
+		iconClass: 'bx bx-bookmarks',
+		subtext: 'Requires multi-file drag-and-drop parsers, Netscape HTML/Chrome JSON decoders, and schema diff algorithms.',
+		description: 'Visualizes, diffs, and merges bookmark structures across temporal exports with custom target folder schema matching, PDF generation, and color-coded status tracking.'
+	},
 };
-
 
 menuSelf.TOOLS_REGISTRY = TOOLS_REGISTRY;
 

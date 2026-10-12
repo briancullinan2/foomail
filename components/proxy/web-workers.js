@@ -113,7 +113,7 @@ const startMasterServer = require('./master.js');
 // =============================================================================
 
 /** @type {number} */
-const HTTP_WS_PORT = 4004;
+const HTTP_WS_PORT = 8000;
 
 /** @type {number} */
 const UDP_PORT = 27950;

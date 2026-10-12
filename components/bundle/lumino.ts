@@ -2,6 +2,8 @@ import './logging';
 import './levenshtein';
 import './lumino-search';
 import './github-worker';
+import '../proxy/websocket';
+import { GlobalDropManager } from '../tools/drag-and-drop';
 import { BoxPanel, DockPanel, Widget, Menu, MenuBar } from '@lumino/widgets';
 import * as commands from '@lumino/commands';
 import * as widgets from '@lumino/widgets';
@@ -54,6 +56,7 @@ function main(): void
 	});
 	mainDock.id = 'main-workspace';
 	luminoSelf.mainDock = mainDock;
+	GlobalDropManager.init();
 
 	// Generate the top application header structures using our unified layout export
 	const { headerRow, menuBar } = createTopBar(commandRegistry);

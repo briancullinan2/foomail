@@ -40,7 +40,7 @@ export class ToolsWidget extends Widget
 		this.addClass('lm-ToolsDetailsWidget');
 		this.addClass('zoom-' + this.zoom);
 		this.title.label = title ?? 'Tools';
-		this.title.iconClass = 'bx bx-category-alt';
+		this.title.iconClass = 'bx bx-spanner';
 		this.title.closable = true;
 
 

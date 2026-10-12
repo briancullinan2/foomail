@@ -95,7 +95,7 @@ export class FolderWizardWidget extends Widget
 		this.node.innerHTML = `
       <div class="lm-FolderWizard-toolbar">
         <button class="lm-FolderWizard-btn primary btn-refresh">
-			<i class="bi bi-refresh-cw"></i>
+			<i class="bx bx-refresh-cw"></i>
 		</button>
         <button class="lm-FolderWizard-btn primary btn-add-file">
           <i class="bi bi-file-earmark-plus"></i> Add Single File

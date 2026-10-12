@@ -1,4 +1,5 @@
 import { Widget } from "@lumino/widgets";
+import type { GlobalToolbarsWindow } from "../bundle/menu.d";
 
 export interface ISearchable
 {
@@ -19,6 +20,8 @@ export interface ITabButton
 	_toggleBtn?: HTMLElement | HTMLDivElement;
 }
 
+
+const searchSelf: GlobalToolbarsWindow = self as unknown as any;
 
 
 // TODO: replace terminal search attachment with this widget
@@ -295,3 +298,5 @@ export class WidgetSearchBar
 	}
 
 }
+
+searchSelf.WidgetSearchBar = WidgetSearchBar;

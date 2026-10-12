@@ -30,7 +30,7 @@ export class SplashScreenWidget extends Widget
 		// Title / Status Labels
 		const titleNode = document.createElement('div');
 		titleNode.className = 'lm-SplashOverlay-title';
-		titleNode.textContent = 'Loading Media';
+		titleNode.textContent = 'Loading Mail';
 
 		this._statusNode = document.createElement('div');
 		this._statusNode.className = 'lm-SplashOverlay-status';

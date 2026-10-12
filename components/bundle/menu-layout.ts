@@ -1,8 +1,6 @@
 import { CommandRegistry } from "@lumino/commands";
 import { DockPanel, Widget } from "@lumino/widgets";
 import { triggerPanelRoute } from "./menu";
-import { SettingsManager } from "./settings";
-import { loadAndInstantiate } from "./babel-compile";
 import { LayoutAdjuster } from "./lumino-widget";
 import { LuminoLayoutNode, serializeDockLayout } from "./lumino-resize";
 import type { GlobalToolbarsWindow } from "./menu.d";
