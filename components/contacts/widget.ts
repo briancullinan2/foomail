@@ -35,9 +35,11 @@ export class ContactsWidget extends Widget
 	private detailPaneEl!: HTMLElement;
 	private searchInput!: HTMLInputElement;
 
-	constructor()
+	constructor(title?: string)
 	{
 		super();
+		this.title.label = title ?? 'Contacts List';
+		this.title.iconClass = 'bx bx-group';
 		this.addClass('lumino-contact-manager');
 		this.initDOM();
 		this.loadSampleContacts();

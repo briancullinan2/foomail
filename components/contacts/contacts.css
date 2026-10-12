@@ -229,6 +229,7 @@
 	width: 60px;
 	height: 60px;
 	border-radius: 50%;
+	aspect-ratio: 1;
 	background: #0284c7;
 	color: #fff;
 	font-size: 1.75rem;

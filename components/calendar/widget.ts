@@ -2,7 +2,21 @@
 
 import { Widget } from '@lumino/widgets';
 import { Message } from '@lumino/messaging';
-import type { ITimelineItem } from '../timeline/generate';
+import type { LuminoMenuWindow, RepositorySettingsWindow } from '../bundle/menu.d';
+
+
+export interface ITimelineItem
+{
+	id: string;
+	category: 'commits' | 'bookmarks' | 'history' | 'locations' | 'events';
+	timestamp: string; // ISO String
+	title: string;
+	detail: any | string;    // JSON string payload
+}
+
+
+const widgetSelf: LuminoMenuWindow & RepositorySettingsWindow = self as unknown as any;
+
 
 export class CalendarWidget extends Widget
 {
@@ -462,29 +476,35 @@ export class CalendarWidget extends Widget
 		//calendarBtn.textContent = 'Calendar';
 		calendarBtn.className = 'view-btn active bx bx-calendar-alt';
 
-		const timelineBtn = document.createElement('a');
-		timelineBtn.className = 'view-btn';
-		timelineBtn.href = '#timeline';
-		timelineBtn.className = 'bx bx-history';
-		timelineBtn.title = 'Switch to Timeline View (2 weeks - 1 day)';
-		timelineBtn.addEventListener('click', () =>
-		{
-			console.log('[View Switcher] Trigger switch to TimelineWidget');
-		});
-
-		const projectsBtn = document.createElement('a');
-		projectsBtn.className = 'view-btn';
-		projectsBtn.href = '#projects';
-		projectsBtn.className = 'bx bx-briefcase-alt';
-		projectsBtn.title = 'Switch to Projects Vertical List View';
-		projectsBtn.addEventListener('click', () =>
-		{
-			console.log('[View Switcher] Trigger switch to ProjectsWidget');
-		});
-
 		viewSwitcherGroup.appendChild(calendarBtn);
-		viewSwitcherGroup.appendChild(timelineBtn);
-		viewSwitcherGroup.appendChild(projectsBtn);
+
+		if(widgetSelf.MODULE_REGISTRY?.['timeline'])
+		{
+			const timelineBtn = document.createElement('a');
+			timelineBtn.className = 'view-btn';
+			timelineBtn.href = '#timeline';
+			timelineBtn.className = 'bx bx-history';
+			timelineBtn.title = 'Switch to Timeline View (2 weeks - 1 day)';
+			timelineBtn.addEventListener('click', () =>
+			{
+				console.log('[View Switcher] Trigger switch to TimelineWidget');
+			});
+			viewSwitcherGroup.appendChild(timelineBtn);
+		}
+
+		if(widgetSelf.MODULE_REGISTRY?.['projects'])
+		{
+			const projectsBtn = document.createElement('a');
+			projectsBtn.className = 'view-btn';
+			projectsBtn.href = '#projects';
+			projectsBtn.className = 'bx bx-briefcase-alt';
+			projectsBtn.title = 'Switch to Projects Vertical List View';
+			projectsBtn.addEventListener('click', () =>
+			{
+				console.log('[View Switcher] Trigger switch to ProjectsWidget');
+			});
+			viewSwitcherGroup.appendChild(projectsBtn);
+		}
 
 		toolbar.appendChild(navGroup);
 		toolbar.appendChild(this._legendContainer);

@@ -1,7 +1,12 @@
 import { Widget } from "@lumino/widgets";
 import type { IBookmarkNode, BookmarksDeltaFilter, IBookmarkFileSource } from "./widget-parsers";
 import { Signal } from '@lumino/signaling';
+import { Message } from "@lumino/messaging";
+import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
+import type { LuminoLayoutWindow } from "../bundle/lumino.d";
 
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
+	= self as unknown as any;
 
 
 export class BookmarksListWidget extends Widget
@@ -26,6 +31,21 @@ export class BookmarksListWidget extends Widget
 		this.renderLayout();
 	}
 
+	public processMessage(msg: Message): void
+	{
+		if(msg.type === 'close-request')
+		{
+			console.log('Intercepted close request, hiding instead: ' + this.title.label);
+
+			this.hide();
+			widgetSelf.mainDock?.layout?.removeWidget(this);
+			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
+		}
+
+		super.processMessage(msg);
+	}
+
+
 
 	private renderLayout()
 	{
@@ -48,7 +68,7 @@ export class BookmarksListWidget extends Widget
 
 		this.allBookmarks.forEach((b) =>
 		{
-			const dateUnix = b.addDate ? Math.floor(b.addDate.getTime() / 1000) : '';
+			const dateUnix = b.timestamp ? Math.floor(b.timestamp.getTime() / 1000) : '';
 			htmlContent += `    <DT><A HREF="${b.url}" ADD_DATE="${dateUnix}">${this.escapeHtml(b.title)}</A>\n`;
 		});
 

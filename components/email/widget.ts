@@ -31,9 +31,11 @@ export class EmailWidget extends Widget
 	private readerPaneEl!: HTMLElement;
 	private searchInput!: HTMLInputElement;
 
-	constructor()
+	constructor(title?: string)
 	{
 		super();
+		this.title.label = title ?? 'Email Manager';
+		this.title.iconClass = 'bx bx-envelope';
 		this.addClass('lumino-email-manager');
 		this.initDOM();
 		this.loadStellarDemoData();

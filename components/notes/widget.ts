@@ -28,9 +28,11 @@ export class NotesWidget extends Widget
 	private charCountEl!: HTMLElement;
 	private timeStampEl!: HTMLElement;
 
-	constructor()
+	constructor(title?: string)
 	{
 		super();
+		this.title.label = title ?? 'Notes/Journal';
+		this.title.iconClass = 'bx bx-note-book';
 		this.addClass('lumino-terminal-journal');
 		this.initDOM();
 		this.loadDefaultLogs();

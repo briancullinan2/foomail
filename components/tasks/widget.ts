@@ -32,9 +32,11 @@ export class TasksWidget extends Widget
 	private dueDateInput!: HTMLInputElement;
 	private hoursInput!: HTMLInputElement;
 
-	constructor()
+	constructor(title?: string)
 	{
 		super();
+		this.title.label = title ?? 'Task List';
+		this.title.iconClass = 'bx bx-task';
 		this.addClass('lumino-task-gantt');
 		this.initDOM();
 		this.loadSampleObligations();

@@ -41,7 +41,7 @@ export class KeystoreWidget extends Widget
 	{
 		super();
 		this.title.label = title ?? 'Password Manager';
-		this.title.iconClass = 'bx-key';
+		this.title.iconClass = 'bx bx-key';
 		this.addClass('lumino-password-manager');
 		this.initDOM();
 		this.initIndexedDB();
@@ -99,12 +99,12 @@ export class KeystoreWidget extends Widget
                 </div>
 
                 <!-- Main Content / Editor View -->
-                <div class="pwm-main" id="pwmMainContent">
+                <form autocomplete="off" spellcheck="false" data-lpignore="true" class="pwm-main" id="pwmMainContent">
                     <div class="pwm-empty-state">
                         <i class="bx bx-shield-alt-2"></i>
                         <p>Select an item or create a new entry to manage autofill fields.</p>
                     </div>
-                </div>
+                </form>
             </div>
             <input type="file" id="pwmFileInput" style="display: none;" multiple />
         `;
