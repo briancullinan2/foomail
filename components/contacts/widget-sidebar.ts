@@ -62,7 +62,7 @@ export class ContactsSidebar extends Widget
 	{
 		super();
 
-		this.title.label = title ?? 'Contacts';
+		this.title.label = title ?? 'Groups';
 		this.title.iconClass = 'bx bx-card-view-tiles';
 		this.title.closable = true;
 		this.addClass('contacts-sidebar');

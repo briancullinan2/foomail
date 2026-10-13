@@ -160,7 +160,7 @@ export const TOOLS_REGISTRY: Record<string, ComponentRoute> = {
 		description: 'A customizable RSS/Atom feed reader for aggregating external news feeds, article updates, and content channels in real time.'
 	},
 	'chat': {
-		label: 'Chat/Forum',
+		label: 'Chat Agent',
 		url: './components/chat/widget.ts',
 		className: 'ChatWidget',
 		iconClass: 'bx bx-discussion',
@@ -273,7 +273,7 @@ export const TOOLS_REGISTRY: Record<string, ComponentRoute> = {
 	},
 	'settings': {
 		label: 'Edit Settings',
-		url: './components/editor/widget-settings.ts',
+		url: './components/settings/widget.ts',
 		className: 'SettingsWidget',
 		iconClass: 'bx bx-gear',
 		subtext: 'Depends on schema validation transformers, JSON configuration stores, and reactive theme/preference listeners.',

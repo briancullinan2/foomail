@@ -1,0 +1,334 @@
+/* --- Netflix-Style News Feeds & RSS Subscriber Styles --- */
+
+.nf-subscriber-root {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	background-color: var(--jp-layout-color1, #141414);
+	color: var(--jp-ui-font-color1, #cccccc);
+	font-family: var(--jp-ui-font-family, sans-serif);
+	box-sizing: border-box;
+	overflow-y: auto;
+}
+
+/* Cinematic Hero Banner */
+.nf-hero-banner {
+	position: relative;
+	padding: 60px 40px;
+	background: linear-gradient(180deg, rgba(20, 20, 20, 0.2) 0%, rgba(20, 20, 20, 0.95) 90%, #141414 100%),
+		radial-gradient(circle at top right, rgba(229, 9, 20, 0.15), transparent 50%);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nf-hero-content {
+	max-width: 800px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	text-align: center;
+}
+
+.nf-badge-live {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background-color: rgba(229, 9, 20, 0.2);
+	color: #e50914;
+	padding: 4px 12px;
+	border-radius: 20px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	margin: 0 auto;
+}
+
+.nf-hero-content h1 {
+	font-size: 32px;
+	font-weight: 700;
+	color: #ffffff;
+	margin: 0;
+}
+
+.nf-hero-content p {
+	font-size: 14px;
+	color: #999999;
+	line-height: 1.5;
+	margin: 0;
+}
+
+/* Subscribe & Auto-Discovery Bar */
+.nf-subscribe-bar {
+	display: flex;
+	align-items: center;
+	background-color: rgba(0, 0, 0, 0.6);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 32px;
+	padding: 6px 6px 6px 16px;
+	margin-top: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+	transition: border-color 0.2s;
+}
+
+.nf-subscribe-bar:focus-within {
+	border-color: #e50914;
+}
+
+.nf-subscribe-bar i {
+	color: #888888;
+	font-size: 18px;
+	margin-right: 10px;
+}
+
+.nf-subscribe-bar input {
+	background: transparent;
+	border: none;
+	outline: none;
+	color: #ffffff;
+	font-size: 14px;
+	flex: 1;
+	padding: 8px 0;
+}
+
+.nf-btn-primary {
+	background-color: #e50914;
+	color: #ffffff;
+	border: none;
+	border-radius: 24px;
+	padding: 10px 20px;
+	font-weight: 600;
+	font-size: 13px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	transition: background-color 0.2s, transform 0.1s;
+}
+
+.nf-btn-primary:hover {
+	background-color: #b80710;
+}
+
+.nf-btn-primary:active {
+	transform: scale(0.98);
+}
+
+/* Category Rails (Netflix Style Horizontal Tracks) */
+.nf-rails-container {
+	padding: 24px 40px;
+	display: flex;
+	flex-direction: column;
+	gap: 32px;
+}
+
+.nf-rail-section h2 {
+	font-size: 18px;
+	font-weight: 600;
+	color: #ffffff;
+	margin: 0 0 12px 0;
+}
+
+.nf-rail-track {
+	display: flex;
+	gap: 16px;
+	overflow-x: auto;
+	padding-bottom: 12px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.nf-rail-track::-webkit-scrollbar {
+	height: 6px;
+}
+
+.nf-rail-track::-webkit-scrollbar-thumb {
+	background-color: rgba(255, 255, 255, 0.2);
+	border-radius: 3px;
+}
+
+/* Cinematic Channel Cards */
+.nf-channel-card {
+	min-width: 260px;
+	max-width: 260px;
+	background-color: #1f1f1f;
+	border-radius: 8px;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+	cursor: pointer;
+}
+
+.nf-channel-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+	border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nf-card-thumb {
+	height: 90px;
+	background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 36px;
+}
+
+.nf-card-info {
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 1;
+}
+
+.nf-ch-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #ffffff;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.nf-ch-desc {
+	font-size: 12px;
+	color: #999999;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	line-height: 1.4;
+}
+
+.nf-card-actions {
+	padding: 10px 14px;
+	background-color: rgba(0, 0, 0, 0.2);
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nf-action-btn {
+	width: 100%;
+	background-color: rgba(255, 255, 255, 0.1);
+	border: none;
+	color: #ffffff;
+	padding: 6px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	transition: background-color 0.2s;
+}
+
+.nf-action-btn:hover {
+	background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nf-channel-card.subscribed .nf-action-btn {
+	background-color: rgba(46, 204, 113, 0.2);
+	color: #2ecc71;
+}
+
+/* Modal Overlay Preview */
+.nf-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.8);
+	backdrop-filter: blur(4px);
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.nf-modal-card {
+	background-color: #1f1f1f;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	width: 500px;
+	max-width: 90%;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.nf-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nf-modal-title-wrap {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.nf-modal-title-wrap i {
+	font-size: 24px;
+	color: #e50914;
+}
+
+.nf-modal-header h3 {
+	margin: 0;
+	font-size: 16px;
+	color: #ffffff;
+}
+
+.nf-sub-title {
+	font-size: 11px;
+	color: #888888;
+}
+
+.nf-close-modal {
+	background: transparent;
+	border: none;
+	color: #888888;
+	font-size: 20px;
+	cursor: pointer;
+}
+
+.nf-close-modal:hover {
+	color: #ffffff;
+}
+
+.nf-modal-body {
+	padding: 20px;
+}
+
+.nf-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	padding: 16px 20px;
+	background-color: rgba(0, 0, 0, 0.3);
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nf-btn-secondary {
+	background-color: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	color: #cccccc;
+	padding: 8px 16px;
+	border-radius: 20px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.nf-btn-secondary:hover {
+	background-color: rgba(255, 255, 255, 0.05);
+}

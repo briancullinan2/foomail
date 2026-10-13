@@ -1,0 +1,314 @@
+/* --- PGP Configurator & Key Ring Manager Styles --- */
+
+.pgp-config-root {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	background-color: var(--jp-layout-color1, #1e1e1e);
+	color: var(--jp-ui-font-color1, #cccccc);
+	font-family: var(--jp-ui-font-family, sans-serif);
+	box-sizing: border-box;
+}
+
+.pgp-layout-container {
+	display: grid;
+	grid-template-columns: 320px 280px 1fr;
+	height: 100%;
+	gap: 1px;
+	background-color: var(--jp-border-color2, #333333);
+	box-sizing: border-box;
+}
+
+.pgp-panel {
+	background-color: var(--jp-layout-color1, #1e1e1e);
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
+	padding: 16px;
+	gap: 16px;
+}
+
+.pgp-panel-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid var(--jp-border-color2, #333333);
+	padding-bottom: 12px;
+}
+
+.pgp-panel-header h3 {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--jp-ui-font-color0, #ffffff);
+}
+
+.pgp-form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.pgp-form-group label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--jp-ui-font-color3, #888888);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.pgp-input,
+.pgp-select {
+	background-color: var(--jp-layout-color2, #252525);
+	border: 1px solid var(--jp-border-color2, #444444);
+	border-radius: 6px;
+	padding: 8px 10px;
+	color: var(--jp-ui-font-color1, #cccccc);
+	font-size: 13px;
+	outline: none;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pgp-input:focus,
+.pgp-select:focus {
+	border-color: #1a73e8;
+}
+
+.pgp-btn {
+	padding: 8px 16px;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	border: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.pgp-btn.primary {
+	background-color: #1a73e8;
+	color: #ffffff;
+}
+
+.pgp-btn.primary:hover {
+	background-color: #1557b0;
+}
+
+.pgp-btn.secondary {
+	background-color: var(--jp-layout-color2, #2a2a2a);
+	color: var(--jp-ui-font-color1, #cccccc);
+	border: 1px solid var(--jp-border-color2, #444444);
+}
+
+.pgp-btn.secondary:hover {
+	background-color: var(--jp-layout-color3, #333333);
+}
+
+.pgp-divider {
+	border: none;
+	border-top: 1px solid var(--jp-border-color2, #333333);
+	margin: 4px 0;
+}
+
+/* Drop Zone Area */
+.pgp-drop-zone {
+	border: 2px dashed var(--jp-border-color2, #444444);
+	border-radius: 8px;
+	padding: 20px;
+	text-align: center;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	background-color: var(--jp-layout-color2, #222222);
+	transition: border-color 0.2s, background-color 0.2s;
+}
+
+.pgp-drop-zone:hover {
+	border-color: #1a73e8;
+	background-color: var(--jp-layout-color3, #2a2a2a);
+}
+
+.pgp-drop-zone i {
+	font-size: 28px;
+	color: #1a73e8;
+}
+
+.pgp-drop-zone span {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--jp-ui-font-color0, #ffffff);
+}
+
+.pgp-drop-zone p {
+	font-size: 11px;
+	color: var(--jp-ui-font-color3, #888888);
+	margin: 0;
+}
+
+/* Key Ring List */
+.pgp-badge-count {
+	font-size: 11px;
+	background-color: var(--jp-layout-color2, #2a2a2a);
+	padding: 2px 8px;
+	border-radius: 10px;
+	color: var(--jp-ui-font-color3, #888888);
+}
+
+.pgp-list-container {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.pgp-key-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.pgp-key-item:hover {
+	background-color: var(--jp-layout-color2, #252525);
+}
+
+.pgp-key-icon {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 14px;
+	color: #ffffff;
+	flex-shrink: 0;
+}
+
+.pgp-key-icon.public-key {
+	background-color: #33b679;
+}
+
+.pgp-key-icon.private-key {
+	background-color: #d93025;
+}
+
+.pgp-key-icon.key-pair {
+	background-color: #1a73e8;
+}
+
+.pgp-key-details {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.pgp-k-name {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--jp-ui-font-color0, #ffffff);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.pgp-k-type {
+	font-size: 11px;
+	color: var(--jp-ui-font-color3, #888888);
+}
+
+/* Inspector Panel */
+.pgp-inspector-body {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.pgp-inspector-card {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.pgp-ins-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 12px;
+}
+
+.pgp-ins-label {
+	color: var(--jp-ui-font-color3, #888888);
+}
+
+.pgp-ins-val {
+	color: var(--jp-ui-font-color0, #ffffff);
+	font-weight: 500;
+}
+
+.pgp-ins-val.highlight {
+	color: #1a73e8;
+}
+
+.pgp-fingerprint {
+	font-family: monospace;
+	font-size: 11px;
+	background-color: var(--jp-layout-color2, #252525);
+	padding: 6px 8px;
+	border-radius: 4px;
+	color: #33b679;
+	word-break: break-all;
+	display: block;
+	margin-top: 4px;
+}
+
+.pgp-ins-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.pgp-code-area {
+	width: 100%;
+	height: 180px;
+	background-color: var(--jp-layout-color2, #151515);
+	border: 1px solid var(--jp-border-color2, #444444);
+	color: #a9b7c6;
+	font-family: monospace;
+	font-size: 11px;
+	padding: 10px;
+	border-radius: 6px;
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.pgp-ins-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.pgp-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--jp-ui-font-color3, #888888);
+	font-size: 12px;
+	text-align: center;
+	padding: 20px;
+}

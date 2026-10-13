@@ -6,7 +6,7 @@ import { AceEditorPool, AceEditorWidget } from "./widget";
 const editorSelf: GlobalToolbarsWindow & RepositorySettingsWindow = self as unknown as any;
 
 
-export class SettingsWidget extends AceEditorWidget
+export class SettingsEditorWidget extends AceEditorWidget
 {
 	constructor(fileId?: string, initialContent?: string)
 	{

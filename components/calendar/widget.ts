@@ -213,8 +213,8 @@ export class CalendarWidget extends Widget
 		const todayStr = new Date().toISOString().split('T')[0];
 
 		// Fill leading tail days from previous month
-		const prevMonthLastDay = new Date(this._currentYear, this._currentMonth - 1, 0).getDate();
-		for(let i = startDayOfWeek - 1; i >= 0; i--)
+		const prevMonthLastDay = new Date(this._currentYear, this._currentMonth - 1, 0).getDate() - 7;
+		for(let i = startDayOfWeek - 1; i >= -28; i--)
 		{
 			const dayNum = prevMonthLastDay - i;
 			const cell = this._createDayCell(dayNum, true);
@@ -234,7 +234,7 @@ export class CalendarWidget extends Widget
 
 		// Fill trailing tail days to complete week grid
 		const totalCellsSoFar = startDayOfWeek + totalDaysInMonth;
-		const totalGridCells = Math.ceil(totalCellsSoFar / 7) * 7; // 28, 35, or 42
+		const totalGridCells = Math.ceil(totalCellsSoFar / 7) * 7 + 28; // 28, 35, or 42
 		for(let day = 1; day <= totalGridCells - totalCellsSoFar; day++)
 		{
 			const cell = this._createDayCell(day, true);

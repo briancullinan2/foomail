@@ -1,3 +1,8 @@
+@import './pgp.css';
+@import './signature.css';
+@import './template.css';
+@import './spam.css';
+
 .lumino-email-manager {
 	display: flex;
 	flex-direction: column;
