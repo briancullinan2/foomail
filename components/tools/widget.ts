@@ -4,10 +4,11 @@ import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow }
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
 import { ToolsSidebar } from './widget-sidebar';
 import { Message } from '@lumino/messaging';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	& RepositorySettingsWindow = self as unknown as any;
+	& RepositorySettingsWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
 export interface ToolsDetailsWidgetOptions
@@ -20,7 +21,7 @@ export interface ToolsDetailsWidgetOptions
 export type IconSize = 'tiny' | 'small' | 'medium' | 'large' | 'huge';
 
 
-export class ToolsWidget extends Widget
+export class ToolsWidget extends widgetSelf.AutoSidebarWidget<ToolsSidebar>
 {
 	private _registry?: Record<string, ComponentRoute>;
 	private _selectedKey: string | null = null;
@@ -31,7 +32,6 @@ export class ToolsWidget extends Widget
 
 	public modules: Record<string, Record<string, Function>> = LOCAL_COMMANDS;
 	private _detailsContainer!: HTMLElement;
-	private _toolsSidebar?: ToolsSidebar;
 
 
 	constructor(title?: string, options: ToolsDetailsWidgetOptions = {})
@@ -56,30 +56,6 @@ export class ToolsWidget extends Widget
 				this.selectTool(firstKey);
 			}
 		}
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this._toolsSidebar?.close();
-		}
-
-		super.processMessage(msg);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._toolsSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._toolsSidebar?.close();
-		super.onBeforeDetach(msg);
 	}
 
 	/**
@@ -115,41 +91,15 @@ export class ToolsWidget extends Widget
 		}
 	}
 
-	protected onAfterAttach(): void
+	protected override onAfterAttach(msg: Message): void
 	{
-		if(this._toolsSidebar && !this._toolsSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
+		super.onAfterAttach(msg);
 		if(this._selectedKey)
 		{
 			this._renderDetails();
 		}
 	}
 
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-	}
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._toolsSidebar)
-			{
-				if(!this._toolsSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._toolsSidebar, {
-						type: 'outline',
-						projectId: that._toolsSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
 
 	private _buildUI(): void
 	{
@@ -159,7 +109,7 @@ export class ToolsWidget extends Widget
 		this._detailsContainer = document.createElement('main') as HTMLElement;
 		this._detailsContainer.className = 'tools-details-view';
 
-		this._toolsSidebar = new ToolsSidebar();
+		this._sidebarWidget = new ToolsSidebar();
 
 		this.node.appendChild(this._detailsContainer);
 	}

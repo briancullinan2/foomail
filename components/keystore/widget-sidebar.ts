@@ -4,30 +4,22 @@ import { KeyParser } from "./key-parser";
 import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 
-export interface IPasswordOptions
-{
-	passwordsChanged: ISignal<KeystoreWidget, CredentialRecord[]>;
-}
-
-
-
-const widgetSelf: LuminoLayoutWindow
+const widgetSelf: LuminoLayoutWindow & WidgetExtensionsWindow
 	= self as unknown as any;
 
 
-export class PasswordsSidebar extends Widget
+export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWidget, CredentialRecord[]>
 {
 	private searchInput!: HTMLInputElement;
 	private typeFilterSelect!: HTMLSelectElement;
 	private credentialListEl!: HTMLElement;
 	private filteredCredentials: CredentialRecord[] = [];
 	private selectedCredentialId: string | null = null;
-	private credentials: CredentialRecord[] = [];
 
 	private _selectedPassword: Signal<PasswordsSidebar, CredentialRecord> = new Signal(this);
-	static _instance?: PasswordsSidebar;
 
 	public get selectedPassword(): ISignal<PasswordsSidebar, CredentialRecord>
 	{
@@ -40,41 +32,13 @@ export class PasswordsSidebar extends Widget
 	private _createPassword: Signal<PasswordsSidebar, CredentialType> = new Signal(this);
 	public get createPassword(): ISignal<PasswordsSidebar, CredentialType> { return this._createPassword; }
 
-	private _mainpanelChanged?: ISignal<KeystoreWidget, CredentialRecord[]>;
-	private _mainpanelSub: (main: KeystoreWidget, items: CredentialRecord[]) => void = (_, items) =>
+	constructor(title?: string, options?: IMainpanelOptions<KeystoreWidget, CredentialRecord[]>)
 	{
-		this.credentials = items;
-		this.filterAndRenderList();
-	};
-
-	constructor(title?: string, options?: IPasswordOptions)
-	{
-		if(!PasswordsSidebar._instance)
-		{
-			super();
-			PasswordsSidebar._instance = this;
-			this.title.label = title ?? 'Passwords';
-			this.title.iconClass = 'bx bx-card-view-tiles';
-			this.title.closable = true;
-			this.initDOM();
-		}
-		if(options?.passwordsChanged)
-		{
-			PasswordsSidebar._instance._mainpanelChanged = options.passwordsChanged;
-			PasswordsSidebar._instance._mainpanelChanged.connect(PasswordsSidebar._instance._mainpanelSub);
-		}
-		return PasswordsSidebar._instance;
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
+		super(PasswordsSidebar.name, options);
+		this.title.label = title ?? 'Passwords';
+		this.title.iconClass = 'bx bx-card-view-tiles';
+		this.title.closable = true;
+		this.initDOM();
 	}
 
 	protected override onAfterAttach(msg: Message): void
@@ -82,7 +46,6 @@ export class PasswordsSidebar extends Widget
 		super.onAfterAttach(msg);
 		this.renderListUI();
 	}
-
 
 	private initDOM(): void
 	{
@@ -122,15 +85,15 @@ export class PasswordsSidebar extends Widget
 		this.credentialListEl = this.node.querySelector('#pwmCredentialList') as HTMLElement;
 
 		// Bind events
-		this.searchInput.addEventListener('input', () => this.filterAndRenderList());
-		this.typeFilterSelect.addEventListener('change', () => this.filterAndRenderList());
+		this.searchInput.addEventListener('input', () => this.filterAndRender());
+		this.typeFilterSelect.addEventListener('change', () => this.filterAndRender());
 
 
 		const addBtn = this.node.querySelector('#pwmAddBtn');
 		addBtn?.addEventListener('click', () => this._createPassword.emit(this.typeFilterSelect.value as CredentialType));
 
 		const exportBtn = this.node.querySelector('#pwmExportBtn');
-		exportBtn?.addEventListener('click', () => KeyParser.exportAllCredentials(this.credentials));
+		exportBtn?.addEventListener('click', () => KeyParser.exportAllCredentials(this.items ?? []));
 
 		// Drag & Drop Setup
 		const dropZone = this.node.querySelector('#pwmDropZone') as HTMLElement;
@@ -161,19 +124,19 @@ export class PasswordsSidebar extends Widget
 	}
 
 	// --- Filtering & Rendering ---
-	private filterAndRenderList(): void
+	protected filterAndRender(): void
 	{
 		const query = this.searchInput.value.toLowerCase();
 		const typeFilter = this.typeFilterSelect.value;
 
-		this.filteredCredentials = this.credentials.filter(item =>
+		this.filteredCredentials = this.items?.filter(item =>
 		{
 			const matchesType = typeFilter === 'all' || item.type === typeFilter;
 			const matchesQuery = item.title.toLowerCase().includes(query) ||
 				item.domain.toLowerCase().includes(query) ||
 				item.fields.some(f => f.name.toLowerCase().includes(query) || f.value.toLowerCase().includes(query));
 			return matchesType && matchesQuery;
-		});
+		}) ?? [];
 
 		this.renderListUI();
 	}

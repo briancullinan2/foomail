@@ -5,6 +5,7 @@ import { ICalendarData, ICalendarEvent, ICalendarParser } from "./ics-parser";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
 import type { CalendarWidget } from "./widget";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 export interface ICalendarSource
 {
@@ -17,34 +18,22 @@ export interface ICalendarSource
 	events: ICalendarEvent[];
 }
 
-export interface ICalendarOptions
-{
-	calendarsChanged: ISignal<CalendarWidget, ICalendarSource[]>;
-}
-
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class CalendarSidebar extends Widget
+export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidget, ICalendarSource[]>
 {
 	private calendarListEl!: HTMLElement;
 	private miniCalendarEl!: HTMLElement;
 	private searchInput!: HTMLInputElement;
 
 	private currentDisplayDate: Date = new Date();
-	private calendars: ICalendarSource[] = [];
 
 	private _selectedDate: Signal<CalendarSidebar, Date> = new Signal(this);
 	public get selectedDate(): ISignal<CalendarSidebar, Date> { return this._selectedDate; }
 
 	private _calendarsChanged: Signal<CalendarSidebar, ICalendarSource[]> = new Signal(this);
 	public get calendarsChanged(): ISignal<CalendarSidebar, ICalendarSource[]> { return this._calendarsChanged; }
-
-	private _mainpanelChanged?: ISignal<CalendarWidget, ICalendarSource[]>;
-	private _mainpanelSub: (main: CalendarWidget, items: ICalendarSource[]) => void = (_, items) =>
-	{
-		this.calendars = items;
-	};
 
 	private _selectedCalendars: Signal<CalendarSidebar, ICalendarSource[]> = new Signal(this);
 
@@ -53,29 +42,13 @@ export class CalendarSidebar extends Widget
 		return this._selectedCalendars;
 	}
 
-	constructor(title?: string, options?: ICalendarOptions)
+	constructor(title?: string, options?: IMainpanelOptions<CalendarWidget, ICalendarSource[]>)
 	{
-		super();
-		this.title.label = 'Calendars';
+		super(CalendarSidebar.name, options);
+		this.title.label = title ?? 'Calendars';
 		this.title.iconClass = 'bx bx-card-view-tiles';
 		this.title.closable = true;
-		if(options?.calendarsChanged)
-		{
-			this._mainpanelChanged = options.calendarsChanged;
-			this._mainpanelChanged.connect(this._mainpanelSub);
-		}
 		this.initDom();
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
 	}
 
 	protected override onAfterAttach(msg: Message): void
@@ -83,7 +56,6 @@ export class CalendarSidebar extends Widget
 		super.onAfterAttach(msg);
 		this.loadDefaultCalendars();
 		this.renderMiniCalendar();
-		this.renderCalendarList();
 	}
 
 	private initDom(): void
@@ -151,7 +123,7 @@ export class CalendarSidebar extends Widget
 
 	private loadDefaultCalendars(): void
 	{
-		this.calendars = [
+		this.items = [
 			{
 				id: 'primary',
 				name: 'Personal & Work',
@@ -183,7 +155,7 @@ export class CalendarSidebar extends Widget
 				events: []
 			}
 		];
-		this._calendarsChanged.emit(this.calendars);
+		this._calendarsChanged.emit(this.items);
 	}
 
 	private renderMiniCalendar(): void
@@ -249,10 +221,10 @@ export class CalendarSidebar extends Widget
 		});
 	}
 
-	private renderCalendarList(): void
+	protected filterAndRender(): void
 	{
 		this.calendarListEl.innerHTML = '';
-		this.calendars.forEach(cal =>
+		this.items?.forEach(cal =>
 		{
 			const item = document.createElement('div');
 			item.className = `cal-list-item ${cal.enabled ? 'active' : ''}`;
@@ -270,7 +242,7 @@ export class CalendarSidebar extends Widget
 			{
 				cal.enabled = checkbox.checked;
 				item.classList.toggle('active', cal.enabled);
-				this._calendarsChanged.emit(this.calendars);
+				this._calendarsChanged.emit(this.items ?? []);
 			});
 
 			this.calendarListEl.appendChild(item);
@@ -331,9 +303,9 @@ export class CalendarSidebar extends Widget
 
 	private addCalendarSource(source: ICalendarSource): void
 	{
-		this.calendars.push(source);
-		this.renderCalendarList();
-		this._calendarsChanged.emit(this.calendars);
+		this.items?.push(source);
+		this.filterAndRender();
+		this._calendarsChanged.emit([source]);
 	}
 
 	private getRandomColor(): string

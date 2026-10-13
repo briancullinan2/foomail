@@ -13,25 +13,14 @@ const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
 
 export class SettingsWidget extends Widget
 {
-	constructor()
+	constructor(title?: string)
 	{
 		super();
-		this.title.label = 'System Settings & Configs';
+		this.title.label = title ?? 'System Settings';
 		this.title.iconClass = 'bx bx-cog';
 		this.title.closable = true;
 
 		this.initDom();
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
 	}
 
 	private initDom(): void
@@ -39,11 +28,6 @@ export class SettingsWidget extends Widget
 		this.addClass('settings-dashboard-root');
 		this.node.innerHTML = `
             <div class="settings-container">
-                <header class="settings-header">
-                    <h2><i class="bx bx-slider-alt"></i> Control Center & Settings Hub</h2>
-                    <p>Manage core runtime environments, GitHub repository sync feeds, Ace 9 editor configurations, Xterm terminal logs, and shared storage paths.</p>
-                </header>
-
                 <div class="settings-accordion" id="settingsAccordion">
                     <!-- Accordion Sections Populated via Sub-Widgets -->
                 </div>
@@ -56,7 +40,7 @@ export class SettingsWidget extends Widget
 		const sections = [
 			{ title: 'Core Environment & Layout Settings', icon: 'bx-server', widget: new CoreSettings() },
 			{ title: 'GitHub Repositories & Sync Feeds', icon: 'bx-git-repo-forked', widget: new GithubSettings() },
-			{ title: 'Ace 9 Code Editor Settings', icon: 'bx-code-block', widget: new AceEditorSettings() },
+			{ title: 'Ace 9 Code Editor Settings', icon: 'bx-code-alt', widget: new AceEditorSettings() },
 			{ title: 'Xterm.js Terminal History & Logs', icon: 'bx-terminal', widget: new XtermSettings() },
 			{ title: 'Shared Google Drives & HTTPS Paths', icon: 'bx-folder-open', widget: new PathsSettings() }
 		];

@@ -5,23 +5,17 @@ import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow }
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
 import { ParseVCard, VCardContact } from "./parse-vcf";
 import type { ContactsWidget } from "./widget";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	& RepositorySettingsWindow = self as unknown as any;
+	& RepositorySettingsWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
-export interface IContactsOptions
-{
-	contactsChanged: ISignal<ContactsWidget, VCardContact[]>;
-}
-
-
-export class ContactsSidebar extends Widget
+export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidget, VCardContact[]>
 {
 	private isEditing: boolean = false;
 	private groupListEl!: HTMLElement;
-	private contacts: VCardContact[] = [];
 	private contactListEl!: HTMLElement;
 	private searchInput!: HTMLInputElement;
 	private selectedGroup: string = 'All';
@@ -49,28 +43,14 @@ export class ContactsSidebar extends Widget
 		return this._contactsChanged;
 	}
 
-	private _mainpanelChanged?: ISignal<ContactsWidget, VCardContact[]>;
-	private _mainpanelSub: (main: ContactsWidget, items: VCardContact[]) => void = (_, items) =>
+	constructor(title?: string, options?: IMainpanelOptions<ContactsWidget, VCardContact[]>)
 	{
-		this.contacts = items;
-		this.renderGroups();
-		this.filterAndRender();
-	};
-
-
-	constructor(title?: string, options?: IContactsOptions)
-	{
-		super();
+		super(ContactsSidebar.name, options);
 
 		this.title.label = title ?? 'Groups';
 		this.title.iconClass = 'bx bx-card-view-tiles';
 		this.title.closable = true;
 		this.addClass('contacts-sidebar');
-		if(options?.contactsChanged)
-		{
-			this._mainpanelChanged = options.contactsChanged;
-			this._mainpanelChanged.connect(this._mainpanelSub);
-		}
 
 		this._buildUI();
 
@@ -78,7 +58,7 @@ export class ContactsSidebar extends Widget
 
 	private loadSampleContacts(): void
 	{
-		this.contacts = [
+		this.items = [
 			{
 				uid: 'c-1',
 				categories: 'Engineering',
@@ -99,50 +79,15 @@ export class ContactsSidebar extends Widget
 				rev: new Date().toISOString()
 			}
 		];
-		this.renderGroups();
 		this.filterAndRender();
-		this._contactsChanged.emit(this.contacts);
+		this._contactsChanged.emit(this.items);
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
-	}
 
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
 		this.loadSampleContacts();
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.renderGroups();
-		this.filterAndRender();
-	}
-
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.renderGroups();
-		this.filterAndRender();
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		super.onBeforeDetach(msg);
 	}
 
 
@@ -175,9 +120,9 @@ export class ContactsSidebar extends Widget
 	private renderGroups(): void
 	{
 		const groupsMap = new Map<string, number>();
-		groupsMap.set('All', this.contacts.length);
+		groupsMap.set('All', this.items?.length ?? 0);
 
-		this.contacts.forEach(c =>
+		this.items?.forEach(c =>
 		{
 			const cat = c.categories || 'Uncategorized';
 			groupsMap.set(cat, (groupsMap.get(cat) || 0) + 1);
@@ -195,7 +140,6 @@ export class ContactsSidebar extends Widget
 			item.addEventListener('click', () =>
 			{
 				this.selectedGroup = groupName;
-				this.renderGroups();
 				this.filterAndRender();
 			});
 			this.groupListEl.appendChild(item);
@@ -238,19 +182,20 @@ export class ContactsSidebar extends Widget
 	private createNewContact(): void
 	{
 		const newC = ParseVCard.createNewContact();
-		this.contacts.push(newC);
+		this.items?.push(newC);
 		this.selectedContactUid = newC.uid;
 		this.isEditing = true;
 		this._editContact.emit(true);
-		this.renderGroups();
 		this.filterAndRender();
 	}
 
-	private filterAndRender(): void
+	protected filterAndRender(): void
 	{
+		this.renderGroups();
+
 		const query = this.searchInput.value.toLowerCase();
 
-		this.filteredContacts = this.contacts.filter(c =>
+		this.filteredContacts = this.items?.filter(c =>
 		{
 			const matchesGroup = this.selectedGroup === 'All' || c.categories === this.selectedGroup;
 			const matchesQuery = c.fn.toLowerCase().includes(query) ||
@@ -258,7 +203,7 @@ export class ContactsSidebar extends Widget
 				c.org.toLowerCase().includes(query) ||
 				c.tel.toLowerCase().includes(query);
 			return matchesGroup && matchesQuery;
-		});
+		}) ?? [];
 
 		this.renderContactList();
 	}

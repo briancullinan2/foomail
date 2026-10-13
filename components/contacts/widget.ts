@@ -128,7 +128,7 @@ export class ContactsWidget extends Widget
 		// Cache DOM elements
 		this.detailPaneEl = this.node.querySelector('#cmDetailPane') as HTMLElement;
 		this._contactsSidebar = new ContactsSidebar(undefined, {
-			contactsChanged: this.contactsChanged
+			itemsChanged: this.contactsChanged
 		});
 		this.resubscribeSidebar();
 	}

@@ -2,10 +2,9 @@ import { Widget } from '@lumino/widgets';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
 import type { LuminoMenuWindow, GlobalToolbarsWindow } from '../bundle/menu.d';
 import { TasksSidebar } from './widget-sidebar';
-import { Message } from '@lumino/messaging';
-import { ISignal, Signal } from '@lumino/signaling';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
-const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow & WidgetExtensionsWindow
 	= self as unknown as any;
 
 export interface TaskTask
@@ -22,10 +21,8 @@ export interface TaskTask
 	isDeleted?: boolean;
 }
 
-export class TasksWidget extends Widget
+export class TasksWidget extends widgetSelf.WithChangingWidget<TasksWidget, TaskTask>
 {
-	private tasks: TaskTask[] = [];
-	private selectedTaskId: string | null = null;
 	private currentViewMode: 'grid' | 'gantt' = 'grid';
 
 	// UI Elements
@@ -39,32 +36,7 @@ export class TasksWidget extends Widget
 	private startDateInput!: HTMLInputElement;
 	private dueDateInput!: HTMLInputElement;
 	private hoursInput!: HTMLInputElement;
-	private _tasksSidebar?: TasksSidebar;
 
-	private _tasksChanged: Signal<TasksWidget, TaskTask[]> = new Signal(this);
-
-
-	private subSelected: (_: Widget, id: string) => any = (_, id) =>
-	{
-		this.selectedTaskId = id;
-		this.currentViewMode = 'grid';
-		// this.renderReaderPane();
-		const t = this.tasks.find(t => t.id === id);
-		if(t)
-		{
-			this.loadTaskIntoForm(t);
-		}
-	};
-	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
-	{
-		// this.isEditing = edit;
-		// this.renderReaderPane();
-	};
-	private subChanged: (_: Widget, items: TaskTask[]) => any = (_, items) =>
-	{
-		this.tasks = items;
-		// this.renderReaderPane();
-	};
 
 	constructor(title?: string)
 	{
@@ -74,72 +46,6 @@ export class TasksWidget extends Widget
 		this.title.closable = true;
 		this.addClass('lumino-task-gantt');
 		this.initDOM();
-	}
-
-
-	protected override onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		if(this._tasksSidebar && !this._tasksSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
-		this.resubscribeSidebar();
-	}
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-		this.resubscribeSidebar();
-	}
-
-	private resubscribeSidebar()
-	{
-		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
-		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
-		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
-		this._tasksSidebar?.selectedTask.connect(this.subSelected);
-		// this._tasksSidebar?.editEmail.connect(this.subEditing);
-		this._tasksSidebar?.tasksChanged.connect(this.subChanged);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
-		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
-		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
-		this._tasksSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
-		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
-		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
-		this._tasksSidebar?.close();
-		super.onBeforeDetach(msg);
-	}
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._tasksSidebar)
-			{
-				if(!this._tasksSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._tasksSidebar, {
-						type: 'outline',
-						projectId: that._tasksSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
 	}
 
 
@@ -267,8 +173,8 @@ export class TasksWidget extends Widget
 			this.saveActiveTaskForm();
 		});
 
-		this._tasksSidebar = new TasksSidebar(undefined, {
-			tasksChanged: this._tasksChanged
+		this._sidebarWidget = new TasksSidebar(undefined, {
+			itemsChanged: this._itemsChanged
 		});
 
 	}
@@ -285,7 +191,7 @@ export class TasksWidget extends Widget
 				const items = Array.isArray(parsed) ? parsed : [parsed];
 				items.forEach((item: any) =>
 				{
-					this.tasks.push({
+					this.items?.push({
 						id: 'imp-' + Math.random().toString(36).substring(2, 9),
 						title: item.title || 'Imported Task',
 						assignee: item.assignee || 'Unassigned',
@@ -300,7 +206,7 @@ export class TasksWidget extends Widget
 			} catch(err) { console.error('Failed to parse task JSON'); }
 		}
 
-		this._tasksChanged.emit([...this.tasks]);
+		this._itemsChanged.emit([...this.items ?? []]);
 	}
 
 	private toggleViewMode(): void
@@ -326,27 +232,28 @@ export class TasksWidget extends Widget
 		}
 	}
 
-	private loadTaskIntoForm(t: TaskTask): void
+	protected filterAndRender(t?: TaskTask): void
 	{
+		t ??= this._selectedItem;
 		const emptyState = this.node.querySelector('#tgEmptyState') as HTMLElement;
 		const editorForm = this.node.querySelector('#tgEditorForm') as HTMLElement;
 		emptyState.classList.add('hidden');
 		editorForm.classList.remove('hidden');
 
-		this.titleInput.value = t.title;
-		this.assigneeInput.value = t.assignee;
-		this.prioritySelect.value = t.priority;
-		this.statusSelect.value = t.status;
-		this.progressSlider.value = t.progress.toString();
-		this.progressValEl.textContent = t.progress.toString();
-		this.startDateInput.value = t.startDate;
-		this.dueDateInput.value = t.dueDate;
-		this.hoursInput.value = t.estimatedHours.toString();
+		this.titleInput.value = t?.title ?? "";
+		this.assigneeInput.value = t?.assignee ?? "";
+		this.prioritySelect.value = t?.priority ?? "";
+		this.statusSelect.value = t?.status ?? "";
+		this.progressSlider.value = t?.progress.toString() ?? "";
+		this.progressValEl.textContent = t?.progress.toString() ?? "";
+		this.startDateInput.value = t?.startDate ?? "";
+		this.dueDateInput.value = t?.dueDate ?? "";
+		this.hoursInput.value = t?.estimatedHours.toString() ?? "";
 	}
 
 	private saveActiveTaskForm(): void
 	{
-		const task = this.tasks.find(t => t.id === this.selectedTaskId);
+		const task = this.items?.find(t => t.id === this._selectedItemId);
 		if(!task) return;
 
 		task.title = this.titleInput.value;
@@ -358,7 +265,7 @@ export class TasksWidget extends Widget
 		task.dueDate = this.dueDateInput.value;
 		task.estimatedHours = parseFloat(this.hoursInput.value) || 0;
 
-		this._tasksChanged.emit([task]);
+		this._itemsChanged.emit([task]);
 	}
 
 	private createNewTask(): void
@@ -374,27 +281,27 @@ export class TasksWidget extends Widget
 			dueDate: '2026-10-25',
 			estimatedHours: 10
 		};
-		this.tasks.push(newTask);
-		this.selectedTaskId = newTask.id;
+		this.items?.push(newTask);
+		this._selectedItemId = newTask.id;
 		if(this.currentViewMode === 'gantt') this.toggleViewMode(); // back to grid
-		this.loadTaskIntoForm(newTask);
+		this.filterAndRender(newTask);
 	}
 
 	private deleteSelectedTask(): void
 	{
-		if(!this.selectedTaskId) return;
-		const toDelete = this.tasks.filter(t => t.id === this.selectedTaskId);
-		this.tasks = this.tasks.filter(t => t.id !== this.selectedTaskId);
-		this.selectedTaskId = null;
+		if(!this._selectedItemId) return;
+		const toDelete = this.items?.filter(t => t.id === this._selectedItemId);
+		this.items = this.items?.filter(t => t.id !== this._selectedItemId);
+		this._selectedItemId = undefined;
 		this.node.querySelector('#tgEmptyState')?.classList.remove('hidden');
 		this.node.querySelector('#tgEditorForm')?.classList.add('hidden');
-		this._tasksChanged.emit(toDelete.map((t: TaskTask) => { t.isDeleted = true; return t; }));
+		this._itemsChanged.emit(toDelete?.map((t: TaskTask) => { t.isDeleted = true; return t; }) ?? []);
 	}
 
 	private renderGanttChart(): void
 	{
 		this.ganttChartEl.innerHTML = '';
-		if(this.tasks.length === 0)
+		if(this.items?.length === 0)
 		{
 			this.ganttChartEl.innerHTML = `<div class="tg-empty-state"><p>No tasks to render on timeline.</p></div>`;
 			return;
@@ -404,7 +311,7 @@ export class TasksWidget extends Widget
 		const baseEpoch = new Date('2026-10-01').getTime();
 		const totalSpanDays = 31; // October width
 
-		this.tasks.forEach(t =>
+		this.items?.forEach(t =>
 		{
 			const startEpoch = new Date(t.startDate || '2026-10-01').getTime();
 			const dueEpoch = new Date(t.dueDate || '2026-10-15').getTime();
@@ -432,7 +339,7 @@ export class TasksWidget extends Widget
 
 	private exportTasks(): void
 	{
-		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.tasks, null, 2));
+		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.items, null, 2));
 		const a = document.createElement('a');
 		a.href = dataStr;
 		a.download = `nexus_tasks_${Date.now()}.json`;

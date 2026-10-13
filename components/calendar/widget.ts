@@ -85,7 +85,7 @@ export class CalendarWidget extends Widget
 		this._calendarGridContainer.className = 'calendar-viewport-container';
 		this.node.appendChild(this._calendarGridContainer);
 		this._calendarSidebar = new CalendarSidebar(undefined, {
-			calendarsChanged: this.calendarsChanged
+			itemsChanged: this.calendarsChanged
 		});
 
 	}

@@ -52,17 +52,6 @@ export class NewsWidget extends Widget
 		this.initDom();
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
-	}
-
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);

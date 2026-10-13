@@ -103,8 +103,8 @@ export class ResponsiveManager
 	private _savedLayoutState: DockPanel.ILayoutConfig | null = null;
 	private _isMobileCollapsed?: boolean = undefined;
 	private _isWidescreenSplit?: boolean = undefined;
-	alreadyResizing: boolean = false;
-	resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+	public alreadyResizing: boolean = false;
+	private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	private constructor() { }
 

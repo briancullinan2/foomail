@@ -41,17 +41,6 @@ export class EventEditorWidget extends Widget
 		this.initDom();
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
-	}
-
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
@@ -60,7 +49,7 @@ export class EventEditorWidget extends Widget
 
 	private initDom(): void
 	{
-		this.addClass('cal-editor-root';
+		this.addClass('cal-editor-root');
 		this.node.innerHTML = `
             <div class="cal-editor-container">
                 <header class="cal-editor-header">

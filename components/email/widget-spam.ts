@@ -29,26 +29,15 @@ export class SpamGuardWidget extends Widget
 	private _filtersChanged: Signal<SpamGuardWidget, ISpamFilterFeed[]> = new Signal(this);
 	public get filtersChanged(): ISignal<SpamGuardWidget, ISpamFilterFeed[]> { return this._filtersChanged; }
 
-	constructor()
+	constructor(title?: string)
 	{
 		super();
-		this.title.label = 'Spam Filter & Open Feeds';
+		this.title.label = title ?? 'Spam Filter';
 		this.title.iconClass = 'bx bx-shield-alt-2';
 		this.title.closable = true;
 
 		this.initDefaultFeeds();
 		this.initDom();
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return;
-		}
-		super.processMessage(msg);
 	}
 
 	protected override onAfterAttach(msg: Message): void

@@ -4,21 +4,17 @@ import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
-export interface IEmailsOptions
-{
-	emailsChanged: ISignal<EmailWidget, EmailMessage[]>;
-}
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class EmailsSidebar extends Widget
+export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, EmailMessage[]>
 {
 	private folderListEl!: HTMLElement;
 	private messageListEl!: HTMLElement;
 	private searchInput!: HTMLInputElement;
-	private messages: EmailMessage[] = [];
 	private filteredMessages: EmailMessage[] = [];
 	private selectedMessageId: string | null = null;
 	private currentFolder: string = 'inbox';
@@ -45,70 +41,21 @@ export class EmailsSidebar extends Widget
 		return this._emailsChanged;
 	}
 
-	private _mainpanelChanged?: ISignal<EmailWidget, EmailMessage[]>;
-	private _mainpanelSub: (main: EmailWidget, items: EmailMessage[]) => void = (_, items) =>
+	constructor(title?: string, options?: IMainpanelOptions<EmailWidget, EmailMessage[]>)
 	{
-		this.messages = items;
-		this.updateBadgeCounts();
-		this.filterAndRender();
-	};
-
-
-	constructor(title?: string, options?: IEmailsOptions)
-	{
-		super();
-		this.title.label = 'Messages';
+		super(EmailsSidebar.name, options);
+		this.title.label = title ?? 'Messages';
 		this.title.iconClass = 'bx bx-card-view-tiles';
 		this.title.closable = true;
-		if(options?.emailsChanged)
-		{
-			this._mainpanelChanged?.disconnect(this._mainpanelSub);
-			this._mainpanelChanged = options.emailsChanged;
-			this._mainpanelChanged.connect(this._mainpanelSub);
-		}
 		this.initDom();
 		// this.loadStellarDemoData();
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
-	}
 
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
 		this.loadStellarDemoData();
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.updateBadgeCounts();
-		this.filterAndRender();
-	}
-
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.updateBadgeCounts();
-		this.filterAndRender();
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		super.onBeforeDetach(msg);
 	}
 
 
@@ -166,11 +113,13 @@ export class EmailsSidebar extends Widget
 		this.searchInput.addEventListener('input', () => this.filterAndRender());
 	}
 
-	private filterAndRender(): void
+	protected filterAndRender(): void
 	{
+		this.updateBadgeCounts();
+
 		const query = this.searchInput.value.toLowerCase();
 
-		this.filteredMessages = this.messages.filter(m =>
+		this.filteredMessages = this.items?.filter(m =>
 		{
 			const matchesFolder = m.folder === this.currentFolder;
 			const matchesAi = this.currentAiFilter === 'all' || m.aiCategory === this.currentAiFilter;
@@ -178,14 +127,14 @@ export class EmailsSidebar extends Widget
 				m.senderName.toLowerCase().includes(query) ||
 				m.snippet.toLowerCase().includes(query);
 			return matchesFolder && matchesAi && matchesQuery;
-		});
+		}) ?? [];
 
-		this.renderMessageList();
+		this._renderMessageList();
 	}
 
 	private updateBadgeCounts(): void
 	{
-		const unreadCount = this.messages.filter(m => !m.isRead && m.folder === 'inbox').length;
+		const unreadCount = this.items?.filter(m => !m.isRead && m.folder === 'inbox').length ?? 0;
 		const badge = this.node.querySelector('#inboxCount');
 		if(badge)
 		{
@@ -193,7 +142,7 @@ export class EmailsSidebar extends Widget
 		}
 	}
 
-	private renderMessageList(): void
+	private _renderMessageList(): void
 	{
 		this.messageListEl.innerHTML = '';
 		if(this.filteredMessages.length === 0)
@@ -225,8 +174,7 @@ export class EmailsSidebar extends Widget
 			{
 				m.isRead = true;
 				this.selectedMessageId = m.id;
-				this.updateBadgeCounts();
-				this.renderMessageList();
+				this.filterAndRender();
 				this._selectedEmail.emit(m.id);
 			});
 			this.messageListEl.appendChild(card);
@@ -235,7 +183,7 @@ export class EmailsSidebar extends Widget
 
 	private loadStellarDemoData(): void
 	{
-		this.messages = [
+		this.items = [
 			{
 				id: 'msg-1',
 				senderName: 'GitHub Enterprise',
@@ -298,7 +246,7 @@ export class EmailsSidebar extends Widget
 			}
 		];
 
-		this._emailsChanged.emit(this.messages);
+		this._emailsChanged.emit(this.items);
 		this.updateBadgeCounts();
 		this.filterAndRender();
 	}

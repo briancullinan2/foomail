@@ -2,51 +2,21 @@ import { ISignal, Signal } from "@lumino/signaling";
 import { Widget } from "@lumino/widgets";
 import type { TasksWidget, TaskTask } from "./widget";
 import { Message } from "@lumino/messaging";
-import { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
-import { LuminoLayoutWindow } from "../bundle/lumino.d";
-
-export interface ITasksOptions
-{
-	tasksChanged: ISignal<TasksWidget, TaskTask[]>;
-}
+import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
+import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class TasksSidebar extends Widget
+export class TasksSidebar extends widgetSelf.SidebarChangeWidget<TasksWidget, TaskTask>
 {
 	private taskListEl!: HTMLElement;
-	private selectedTaskId: string | null = null;
-
-
-	private _mainpanelChanged?: ISignal<TasksWidget, TaskTask[]>;
-	private _mainpanelSub: (main: TasksWidget, items: TaskTask[]) => void = (_, items) =>
-	{
-		this.tasks = items;
-		this.renderTaskList();
-	};
-
-
-	private _selectedTask: Signal<TasksSidebar, string> = new Signal(this);
-	private tasks: TaskTask[] = [];
-	private static _instance?: TasksSidebar;
-
-	public get selectedTask(): ISignal<TasksSidebar, string>
-	{
-		return this._selectedTask;
-	}
-
-	private _tasksChanged: Signal<TasksSidebar, TaskTask[]> = new Signal(this);
-
-	public get tasksChanged(): ISignal<TasksSidebar, TaskTask[]>
-	{
-		return this._tasksChanged;
-	}
 
 	private loadSampleTasks(): void
 	{
-		this.tasks = [
+		this.items = [
 			{
 				id: 'task-1',
 				title: 'Refactor DuckDB-Wasm Thread Loader',
@@ -82,69 +52,25 @@ export class TasksSidebar extends Widget
 			}
 		];
 
-		this.renderTaskList();
-		this._tasksChanged.emit(this.tasks);
+		this.filterAndRender();
+		this._itemsChanged.emit(this.items);
 	}
 
-	constructor(title?: string, options?: ITasksOptions)
+	constructor(title?: string, options?: IMainpanelOptions<TasksWidget, TaskTask[]>)
 	{
-		if(!TasksSidebar._instance)
-		{
-			super();
-			TasksSidebar._instance = this;
-			this.title.label = title ?? 'Tasks';
-			this.title.iconClass = 'bx bx-card-view-tiles';
-			this.title.closable = true;
-			this.initDom();
-			// this.loadStellarDemoData();
-			this.loadSampleTasks();
-		}
-		if(options?.tasksChanged)
-		{
-			TasksSidebar._instance._mainpanelChanged?.disconnect(TasksSidebar._instance._mainpanelSub);
-			TasksSidebar._instance._mainpanelChanged = options.tasksChanged;
-			TasksSidebar._instance._mainpanelChanged.connect(TasksSidebar._instance._mainpanelSub);
-		}
-		return TasksSidebar._instance;
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
+		super(TasksSidebar.name, options);
+		this.title.label = title ?? 'Tasks';
+		this.title.iconClass = 'bx bx-card-view-tiles';
+		this.title.closable = true;
+		this.initDom();
+		// this.loadStellarDemoData();
+		this.loadSampleTasks();
 	}
 
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
 		this.loadSampleTasks();
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.renderTaskList();
-	}
-
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		this._mainpanelChanged?.connect(this._mainpanelSub);
-		this.renderTaskList();
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._mainpanelChanged?.disconnect(this._mainpanelSub);
-		super.onBeforeDetach(msg);
 	}
 
 
@@ -161,12 +87,12 @@ export class TasksSidebar extends Widget
 	}
 
 
-	private renderTaskList(): void
+	protected filterAndRender(): void
 	{
 		this.taskListEl.innerHTML = '';
-		this.tasks.forEach(t =>
+		this.items?.forEach(t =>
 		{
-			const isSelected = t.id === this.selectedTaskId;
+			const isSelected = t.id === this._selectedItemId;
 			const item = document.createElement('div');
 			item.className = `tg-task-item ${isSelected ? 'selected' : ''}`;
 			item.innerHTML = `
@@ -181,9 +107,9 @@ export class TasksSidebar extends Widget
             `;
 			item.addEventListener('click', () =>
 			{
-				this.selectedTaskId = t.id;
-				this.renderTaskList();
-				this._selectedTask.emit(t.id);
+				this._selectedItemId = t.id;
+				this.filterAndRender();
+				this._selectedItem.emit(t);
 			});
 			this.taskListEl.appendChild(item);
 		});

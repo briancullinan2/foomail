@@ -4,12 +4,14 @@ import { Signal } from '@lumino/signaling';
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow, IMainpanelOptions } from "../bundle/widget-extensions";
+import type { BookmarksWidget } from "./widget";
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
 
-export class BookmarksListWidget extends Widget
+export class BookmarksListWidget extends widgetSelf.SidebarUpdateWidget<BookmarksWidget, IBookmarkNode[]>
 {
 	public readonly exportTriggered = new Signal<this, string>(this);
 	public readonly layoutChanged = new Signal<this, string[]>(this);
@@ -19,35 +21,19 @@ export class BookmarksListWidget extends Widget
 	private activeFilter: BookmarksDeltaFilter = 'all';
 	private allBookmarks: IBookmarkNode[] = [];
 
-	constructor(title?: string)
+	constructor(title?: string, options?: IMainpanelOptions<BookmarksWidget, IBookmarkNode[]>)
 	{
-		super();
+		super(BookmarksListWidget.name, options);
 		this.id = 'lumino-bookmark-list';
 		this.title.label = title ?? "Bookmarks";
 		this.title.iconClass = 'bx bx-bookmarks';
 		this.title.closable = true;
 		this.title.className = this.id;
 		this.addClass('bm-manager-list');
-		this.renderLayout();
+		this.filterAndRender();
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
-	}
-
-
-
-	private renderLayout()
+	protected filterAndRender()
 	{
 		this.node.innerHTML = '';
 		this.node.appendChild(this.createControlPanel());
@@ -113,12 +99,12 @@ export class BookmarksListWidget extends Widget
 		// const btnCards = document.createElement('button');
 		// btnCards.className = `bm-btn bm-btn-icon ${this.viewMode === 'cards' ? 'active' : ''}`;
 		// btnCards.innerText = '🔲 Grid';
-		// btnCards.onclick = () => { this.viewMode = 'cards'; this.renderLayout(); };
+		// btnCards.onclick = () => { this.viewMode = 'cards'; this.filterAndRender(); };
 
 		// const btnGrid = document.createElement('button');
 		// btnGrid.className = `bm-btn bm-btn-icon ${this.viewMode === 'grid' ? 'active' : ''}`;
 		// btnGrid.innerText = '☰ List';
-		// btnGrid.onclick = () => { this.viewMode = 'grid'; this.renderLayout(); };
+		// btnGrid.onclick = () => { this.viewMode = 'grid'; this.filterAndRender(); };
 
 		actions.appendChild(btnPdf);
 		actions.appendChild(btnExport);
@@ -184,7 +170,7 @@ export class BookmarksListWidget extends Widget
 			{
 				this.targetFolderTree = JSON.parse(schemaInput.value);
 				this.layoutChanged.emit(this.targetFolderTree);
-				this.renderLayout();
+				this.filterAndRender();
 			} catch(err)
 			{
 				alert('Invalid JSON folder structure provided.');
@@ -216,7 +202,7 @@ export class BookmarksListWidget extends Widget
 			btn.onclick = () =>
 			{
 				this.activeFilter = f.key;
-				this.renderLayout();
+				this.filterAndRender();
 			};
 			filterGroup.appendChild(btn);
 		});

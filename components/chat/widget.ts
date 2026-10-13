@@ -1,17 +1,18 @@
-import { Widget, PanelLayout, DockPanel, SplitPanel } from '@lumino/widgets';
+import { Widget, PanelLayout } from '@lumino/widgets';
 import { Message } from '@lumino/messaging';
 import { ChatStorageEngine } from './widget-storage';
 import { ThreadListWidget } from "./widget-threads";
 import { ChatMessageWidget } from './widget-message';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
 import type { GlobalToolbarsWindow } from "../bundle/menu.d";
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
 
-const widgetSelf: LuminoLayoutWindow & GlobalToolbarsWindow = self as unknown as any;
+const widgetSelf: LuminoLayoutWindow & GlobalToolbarsWindow & WidgetExtensionsWindow = self as unknown as any;
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
@@ -47,9 +48,8 @@ export interface IChatWidgetOptions
 // Main Container Widget
 // ============================================================================
 
-export class ChatWidget extends Widget
+export class ChatWidget extends widgetSelf.AutoSidebarWidget<ThreadListWidget>
 {
-	private threadListWidget: ThreadListWidget;
 	private chatWidget: ChatMessageWidget;
 	private storage: ChatStorageEngine;
 
@@ -70,57 +70,10 @@ export class ChatWidget extends Widget
 
 		this.storage = new ChatStorageEngine(env);
 
-		this.threadListWidget = new ThreadListWidget(this.storage);
+		this._sidebarWidget = new ThreadListWidget(this.storage);
 		this.chatWidget = new ChatMessageWidget(this.storage, options);
 
 		this.bindSignals();
-	}
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openThreads();
-	}
-
-	private openThreads()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that.threadListWidget)
-			{
-				if(!this.threadListWidget?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that.threadListWidget, {
-						type: 'outline',
-						projectId: that.threadListWidget?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this.threadListWidget?.close();
-		}
-
-		super.processMessage(msg);
-	}
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this.threadListWidget?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this.threadListWidget?.close();
-		super.onBeforeDetach(msg);
 	}
 
 
@@ -133,10 +86,6 @@ export class ChatWidget extends Widget
 		if(!this.chatWidget.isAttached)
 		{
 			Widget.attach(this.chatWidget, this.node);
-		}
-		if(!this.threadListWidget.isAttached)
-		{
-			this.openThreads();
 		}
 
 		// Initialize storage & state asynchronously after attach
@@ -163,51 +112,51 @@ export class ChatWidget extends Widget
 		if(threads.length > 0)
 		{
 			await this.chatWidget.loadThread(threads[0].path);
-			await this.threadListWidget.refresh(threads[0].path);
+			await this._sidebarWidget?.refresh(threads[0].path);
 		}
 		else
 		{
 			const newId = await this.chatWidget.createNewThread();
-			await this.threadListWidget.refresh(newId);
+			await this._sidebarWidget?.refresh(newId);
 		}
 	}
 
 	private bindSignals(): void
 	{
 		// Select Thread
-		this.threadListWidget.threadSelected.connect(async (_, threadId) =>
+		this._sidebarWidget?.threadSelected.connect(async (_, threadId) =>
 		{
 			await this.chatWidget.loadThread(threadId);
 		});
 
 		// New Thread Request
-		this.threadListWidget.newThreadRequested.connect(async () =>
+		this._sidebarWidget?.newThreadRequested.connect(async () =>
 		{
 			const newId = await this.chatWidget.createNewThread();
-			await this.threadListWidget.refresh(newId);
+			await this._sidebarWidget?.refresh(newId);
 		});
 
 		// Delete Thread
-		this.threadListWidget.threadDeleted.connect(async (_, threadId) =>
+		this._sidebarWidget?.threadDeleted.connect(async (_, threadId) =>
 		{
 			await this.storage.deleteThread(threadId);
 			const threads = await this.storage.getAllThreads();
 			if(threads.length > 0)
 			{
 				await this.chatWidget.loadThread(threads[0].path);
-				await this.threadListWidget.refresh(threads[0].path);
+				await this._sidebarWidget?.refresh(threads[0].path);
 			}
 			else
 			{
 				const newId = await this.chatWidget.createNewThread();
-				await this.threadListWidget.refresh(newId);
+				await this._sidebarWidget?.refresh(newId);
 			}
 		});
 
 		// Chat Updates -> Refresh List
 		this.chatWidget.threadUpdated.connect(async (_, meta) =>
 		{
-			await this.threadListWidget.refresh(meta.path);
+			await this._sidebarWidget?.refresh(meta.path);
 		});
 	}
 }

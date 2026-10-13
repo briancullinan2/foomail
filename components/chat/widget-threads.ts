@@ -10,10 +10,11 @@ import { Signal } from "@lumino/signaling";
 import type { IThreadMeta } from "./widget";
 import { Message } from "@lumino/messaging";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
-const threadsSelf: LuminoLayoutWindow = self as unknown as any;
+const threadsSelf: LuminoLayoutWindow & WidgetExtensionsWindow = self as unknown as any;
 
-export class ThreadListWidget extends Widget
+export class ThreadListWidget extends threadsSelf.SingletonSidebarWidget
 {
 	public readonly threadSelected = new Signal<this, string>(this);
 	public readonly newThreadRequested = new Signal<this, void>(this);
@@ -25,9 +26,9 @@ export class ThreadListWidget extends Widget
 
 	private listContainer?: HTMLDivElement;
 
-	constructor(storage: ChatStorageEngine)
+	constructor(storage: ChatStorageEngine, options?: Widget.IOptions)
 	{
-		super();
+		super(options, ThreadListWidget.name);
 		this.storage = storage;
 		this.id = 'lumino-thread-list-widget';
 		this.title.label = 'Threads';
@@ -35,20 +36,6 @@ export class ThreadListWidget extends Widget
 
 		this.addClass('lm-ThreadListWidget');
 		this.buildDOM();
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			threadsSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
 	}
 
 

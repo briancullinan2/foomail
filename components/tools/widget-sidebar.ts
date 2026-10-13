@@ -3,14 +3,15 @@ import { Widget } from "@lumino/widgets";
 import type { ComponentRoute } from "../bundle/menu";
 import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	& RepositorySettingsWindow = self as unknown as any;
+	& RepositorySettingsWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
 
-export class ToolsSidebar extends Widget
+export class ToolsSidebar extends widgetSelf.SingletonSidebarWidget
 {
 	private _registry?: Record<string, ComponentRoute>;
 	private _searchQuery: string = '';
@@ -25,7 +26,7 @@ export class ToolsSidebar extends Widget
 
 	constructor(title?: string, options?: Widget.IOptions)
 	{
-		super(options);
+		super(options, ToolsSidebar.name);
 
 		this.title.label = title ?? 'Tools';
 		this.title.closable = true;
@@ -33,20 +34,6 @@ export class ToolsSidebar extends Widget
 
 		this._registry = (options as any)?.registry ?? widgetSelf.TOOLS_REGISTRY;
 		this._buildUI();
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			widgetSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
 	}
 
 	protected override onAfterAttach(msg: Message): void

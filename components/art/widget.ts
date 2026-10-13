@@ -14,6 +14,7 @@ import { ISignal, Signal } from '@lumino/signaling';
 import { index } from 'd3';
 import type mime from 'mime';
 import type { IFileViewOptions } from '../fileview/widget';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 export type ViewMode = 'carousel' | 'overflow' | 'grid' | 'details' | 'tree' | 'music' | string;
 
@@ -137,14 +138,14 @@ export interface SourceProviderConfig
 
 type Constructor<T = any, Args extends any[] = any[]> = new (...args: Args) => T;
 
-const widgetSelf: KnownFileViews & LuminoLayoutWindow & GlobalToolbarsWindow & FilelistWindow & {
-	mime: typeof mime;
-} = self as unknown as any;
+const widgetSelf: KnownFileViews & LuminoLayoutWindow & GlobalToolbarsWindow &
+	WidgetExtensionsWindow & FilelistWindow & {
+		mime: typeof mime;
+	} = self as unknown as any;
 
-export class ArtWidget extends Widget
+export class ArtWidget extends widgetSelf.AutoSidebarWidget<Widget>
 {
 	protected sources: string[];
-	private activeWidget: Widget | undefined;
 	private sourcePromises: Map<string, Promise<NestedTreeNode[]>> = new Map();
 
 	protected activeViews: Set<ViewMode> = new Set(['pills', 'styles', 'coverflow']);
@@ -417,14 +418,14 @@ export class ArtWidget extends Widget
 
 	protected override onBeforeHide(msg: Message): void
 	{
-		this.activeWidget?.close();
+		this._sidebarWidget?.close();
 		super.onBeforeHide(msg);
 	}
 
 
 	protected override onBeforeDetach(msg: Message): void
 	{
-		this.activeWidget?.close();
+		this._sidebarWidget?.close();
 		super.onBeforeDetach(msg);
 	}
 
@@ -436,12 +437,12 @@ export class ArtWidget extends Widget
 	{
 		if(index >= this.sources.length) return;
 
-		if(this.activeWidget)
+		if(this._sidebarWidget)
 		{
 			// TODO: too early if something double calls it shows anyways?
 			if(this.rawFiles)
 			{
-				this.showOutline();
+				this.openSidebar();
 			}
 			return;
 		}
@@ -470,7 +471,7 @@ export class ArtWidget extends Widget
 		}
 
 		// used to gate this method
-		this.activeWidget = targetWidget;
+		this._sidebarWidget = targetWidget;
 		this.widgetIndex = index;
 
 		// subscribe to widget
@@ -501,40 +502,12 @@ export class ArtWidget extends Widget
 				this._filesSignal.emit(args);
 				this.rawFiles = args.items;
 
-				this.showOutline();
+				this.openSidebar();
 				this.refreshCurrentFolder();
 			};
 			this.filesSignals[index]?.connect(this.filesHandlers[index], this);
 		}
 
-	}
-
-
-	private showOutline()
-	{
-		const that = this;
-
-		if(!this.activeWidget)
-		{
-			return;
-		}
-		requestAnimationFrame(() =>
-		{
-
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster)
-			{
-				if(that.activeWidget && !that.activeWidget?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that.activeWidget, {
-						type: 'outline',
-						projectId: that.activeWidget?.constructor.name
-					});
-				} else
-				{
-					that.activeWidget?.show();
-				}
-			}
-		});
 	}
 
 
@@ -544,9 +517,9 @@ export class ArtWidget extends Widget
 		(sender as unknown as IErrorEvent).errorOccurred?.disconnect(this.errorHandlers[index]);
 		(sender as unknown as IFilesEvent).filesChanged?.disconnect(this.filesHandlers[index]);
 		sender.close();
-		if(sender === this.activeWidget)
+		if(sender === this._sidebarWidget)
 		{
-			this.activeWidget = undefined;
+			this._sidebarWidget = undefined;
 		}
 
 		this.openOutlineWidget(index + 1);
@@ -693,7 +666,7 @@ export class ArtWidget extends Widget
 	{
 		if(msg.type === 'close-request')
 		{
-			this.activeWidget?.close();
+			this._sidebarWidget?.close();
 		}
 
 		super.processMessage(msg);

@@ -5,12 +5,13 @@ import type { GlobalToolbarsWindow } from '../bundle/menu.d';
 import { BookmarkParserTools, type BookmarksDeltaFilter, type IBookmarkNode } from './widget-parsers';
 import { BookmarksListWidget } from './widget-sidebar';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
-const bookmarksSelf: GlobalToolbarsWindow & LuminoLayoutWindow = self as unknown as any;
+const bookmarksSelf: GlobalToolbarsWindow & LuminoLayoutWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
-export class BookmarksWidget extends Widget implements DropCapableWidget
+export class BookmarksWidget extends bookmarksSelf.AutoSidebarWidget<BookmarksListWidget> implements DropCapableWidget
 {
 	private allBookmarks: IBookmarkNode[] = [];
 	private targetFolderTree: string[] = ['Bookmarks Bar', 'Bookmarks Bar/Dev', 'Other Bookmarks'];
@@ -18,7 +19,6 @@ export class BookmarksWidget extends Widget implements DropCapableWidget
 	private viewMode: 'cards' | 'grid' = 'cards';
 	private selectedBookmark: IBookmarkNode | null = null;
 	public _toggleBtn?: HTMLElement | HTMLDivElement;
-	private _toolsSidebar?: BookmarksListWidget;
 
 	constructor(title?: string)
 	{
@@ -35,64 +35,14 @@ export class BookmarksWidget extends Widget implements DropCapableWidget
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
-		if(this._toolsSidebar && !this._toolsSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
 		setTimeout(() =>
 		{
 			bookmarksSelf.WidgetSearchBar.attachToggleIcon(this, this.renderToggleBtn, this.clickToggleBtn);
 		}, 200);
 	}
 
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this._toolsSidebar?.close();
-		}
-
-		super.processMessage(msg);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._toolsSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-	}
-
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(bookmarksSelf.mainDock && bookmarksSelf.LayoutAdjuster && that._toolsSidebar)
-			{
-				if(!this._toolsSidebar?.isAttached)
-				{
-					bookmarksSelf.LayoutAdjuster?.addOptimalWidgetLayout(bookmarksSelf.mainDock, that._toolsSidebar, {
-						type: 'outline',
-						projectId: that._toolsSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
-
-
 	protected override onBeforeDetach(msg: Message): void
 	{
-		this._toolsSidebar?.close();
-
 		if(this._toggleBtn)
 		{
 			this._toggleBtn?.remove();
@@ -124,7 +74,7 @@ export class BookmarksWidget extends Widget implements DropCapableWidget
 		this.node.innerHTML = '';
 		this.node.appendChild(this.createMainViewGrid());
 
-		this._toolsSidebar = new BookmarksListWidget();
+		this._sidebarWidget = new BookmarksListWidget();
 
 	}
 
