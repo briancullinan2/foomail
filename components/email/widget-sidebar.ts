@@ -62,6 +62,7 @@ export class EmailsSidebar extends Widget
 		this.title.closable = true;
 		if(options?.emailsChanged)
 		{
+			this._mainpanelChanged?.disconnect(this._mainpanelSub);
 			this._mainpanelChanged = options.emailsChanged;
 			this._mainpanelChanged.connect(this._mainpanelSub);
 		}

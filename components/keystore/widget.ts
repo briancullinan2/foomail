@@ -1,4 +1,10 @@
 import { Widget } from '@lumino/widgets';
+import { PasswordsSidebar } from './widget-sidebar';
+import { Message } from '@lumino/messaging';
+import { ISignal, Signal } from '@lumino/signaling';
+import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow } from '../bundle/menu.d';
+import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import { KeyParser } from './key-parser';
 
 // Define interfaces for credential records and autofill fields
 export interface CredentialField
@@ -9,33 +15,70 @@ export interface CredentialField
 	value: string;
 }
 
+export type CredentialType = 'login' | 'apikey' | 'securenote' | 'card' | 'ssh';
+
 export interface CredentialRecord
 {
 	id: string;
 	title: string;
-	type: 'login' | 'apikey' | 'securenote' | 'card' | 'ssh';
+	type: CredentialType;
 	domain: string;
+	path: string;
+	parent: string;
 	fields: CredentialField[];
 	updatedAt: number;
+	isDeleted?: boolean;
 }
+
+
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & RepositorySettingsWindow & LuminoLayoutWindow = self as unknown as any;
+
 
 export class KeystoreWidget extends Widget
 {
-	private db: IDBDatabase | null = null;
 	private credentials: CredentialRecord[] = [];
-	private filteredCredentials: CredentialRecord[] = [];
 	private selectedCredentialId: string | null = null;
+	private filteredCredentials: CredentialRecord[] = [];
 
 	// UI Elements
-	private searchInput!: HTMLInputElement;
-	private typeFilterSelect!: HTMLSelectElement;
-	private credentialListEl!: HTMLElement;
 	private detailContentEl!: HTMLElement;
 	private pinOverlayEl!: HTMLElement;
 	private pinInput!: HTMLInputElement;
 
 	private isUnlocked: boolean = false;
 	private currentPin: string = '1234'; // Default PIN for demo unlock
+	private _keystoreSidebar?: PasswordsSidebar;
+	private _passwordsChanged: Signal<KeystoreWidget, CredentialRecord[]> = new Signal(this);
+	private isEditing: boolean = false;
+
+	private subSelected: (_: Widget, item: CredentialRecord) => any = (_, item) =>
+	{
+		this.selectedCredentialId = item.id;
+		this.renderDetailView();
+	};
+
+	private subCreated: (_: Widget, type: CredentialType) => any = (_, type) =>
+	{
+		this.createNewCredential(type);
+		this.renderDetailView();
+	};
+
+	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
+	{
+		this.isEditing = edit;
+		this.renderDetailView();
+	};
+
+	private subChanged: (_: Widget, items: CredentialRecord[]) => any = (_, items) =>
+	{
+		this.credentials = items;
+		this.renderDetailView();
+	};
+
+	public get passwordsChanged(): ISignal<KeystoreWidget, CredentialRecord[]>
+	{
+		return this._passwordsChanged;
+	}
 
 	constructor(title?: string)
 	{
@@ -45,82 +88,110 @@ export class KeystoreWidget extends Widget
 		this.title.closable = true;
 		this.addClass('lumino-password-manager');
 		this.initDOM();
-		this.initIndexedDB();
+		// KeyParser.initIndexedDB().then(() => this.loadCredentials());
+	}
+
+	protected override onAfterShow(msg: Message): void
+	{
+		super.onAfterShow(msg);
+		this.openSidebar();
+		this.resubscribeSidebar();
+	}
+
+	private resubscribeSidebar()
+	{
+		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
+		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
+		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
+		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
+		this._keystoreSidebar?.selectedPassword.connect(this.subSelected);
+		this._keystoreSidebar?.createPassword.connect(this.subCreated);
+		// this._keystoreSidebar?.editEmail.connect(this.subEditing);
+		this._keystoreSidebar?.passwordsChanged.connect(this.subChanged);
+	}
+
+
+	protected override onBeforeHide(msg: Message): void
+	{
+		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
+		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
+		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
+		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
+		this._keystoreSidebar?.close();
+		super.onBeforeHide(msg);
+	}
+
+
+	protected override onBeforeDetach(msg: Message): void
+	{
+		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
+		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
+		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
+		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
+		this._keystoreSidebar?.close();
+		super.onBeforeDetach(msg);
+	}
+
+	private openSidebar()
+	{
+		if(!this.isUnlocked)
+		{
+			return;
+		}
+		const that = this;
+		setTimeout(() =>
+		{
+			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._keystoreSidebar)
+			{
+				if(!this._keystoreSidebar?.isAttached)
+				{
+					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._keystoreSidebar, {
+						type: 'outline',
+						projectId: that._keystoreSidebar?.constructor.name
+					});
+				}
+			}
+		}, 300);
+	}
+
+
+	protected onAfterAttach(msg: Message): void
+	{
+		super.onAfterAttach(msg);
+		if(this._keystoreSidebar && !this._keystoreSidebar.isAttached)
+		{
+			this.openSidebar();
+		}
+		this.resubscribeSidebar();
 	}
 
 	private initDOM(): void
 	{
 		this.node.innerHTML = `
-            <div class="pwm-container">
-                <!-- PIN Overlay -->
-                <div class="pwm-pin-overlay" id="pwmPinOverlay">
-                    <div class="pwm-pin-box">
-                        <i class="bx bx-shield-quarter pwm-pin-icon"></i>
-                        <h2>Vault Locked</h2>
-                        <p>Enter your 4-digit PIN to reveal credentials (default: 1234)</p>
-                        <input type="password" id="pwmPinInput" maxlength="4" placeholder="••••" />
-                        <button id="pwmUnlockBtn" class="pwm-btn primary">Unlock Vault</button>
-                    </div>
-                </div>
+			<!-- PIN Overlay -->
+			<div class="pwm-pin-overlay" id="pwmPinOverlay">
+				<div class="pwm-pin-box">
+					<i class="bx bx-shield-quarter pwm-pin-icon"></i>
+					<h2>Vault Locked</h2>
+					<p>Enter your 4-digit PIN to reveal credentials (default: 1234)</p>
+					<input type="password" id="pwmPinInput" maxlength="4" placeholder="••••" />
+					<button id="pwmUnlockBtn" class="pwm-btn primary">Unlock Vault</button>
+				</div>
+			</div>
 
-                <!-- Sidebar / List View -->
-                <div class="pwm-sidebar">
-                    <div class="pwm-sidebar-header">
-                        <h2><i class="bx bx-key"></i> Passwords</h2>
-                        <div class="pwm-actions">
-                            <button id="pwmAddBtn" title="Add New Item"><i class="bx bx-plus"></i></button>
-                            <button id="pwmExportBtn" title="Export All"><i class="bx bx-archive-arrow-down"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="pwm-search-bar">
-                        <div class="pwm-search-input-wrap">
-                            <i class="bx bx-search"></i>
-                            <input type="text" id="pwmSearchInput" placeholder="Filter passwords & forms..." />
-                        </div>
-                        <select id="pwmTypeFilter">
-                            <option value="all">All Types</option>
-                            <option value="login">Logins</option>
-                            <option value="apikey">API Keys</option>
-                            <option value="securenote">Notes</option>
-                            <option value="card">Cards</option>
-                            <option value="ssh">SSH Keys</option>
-                        </select>
-                    </div>
-
-                    <!-- Drag & Drop Zone -->
-                    <div class="pwm-drop-zone" id="pwmDropZone">
-                        <i class="bx bx-cloud-upload"></i>
-                        <span>Drop JSON, CSV, HTML, or keys here</span>
-                    </div>
-
-                    <div class="pwm-credential-list" id="pwmCredentialList">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <!-- Main Content / Editor View -->
-                <form autocomplete="off" spellcheck="false" data-lpignore="true" class="pwm-main" id="pwmMainContent">
-                    <div class="pwm-empty-state">
-                        <i class="bx bx-shield-alt-2"></i>
-                        <p>Select an item or create a new entry to manage autofill fields.</p>
-                    </div>
-                </form>
-            </div>
-            <input type="file" id="pwmFileInput" style="display: none;" multiple />
+			<!-- Main Content / Editor View -->
+			<form autocomplete="off" spellcheck="false" data-lpignore="true" class="pwm-main" id="pwmMainContent">
+				<div class="pwm-empty-state">
+					<i class="bx bx-shield-alt-2"></i>
+					<p>Select an item or create a new entry to manage autofill fields.</p>
+				</div>
+			</form>
         `;
 
 		// Cache elements
-		this.searchInput = this.node.querySelector('#pwmSearchInput') as HTMLInputElement;
-		this.typeFilterSelect = this.node.querySelector('#pwmTypeFilter') as HTMLSelectElement;
-		this.credentialListEl = this.node.querySelector('#pwmCredentialList') as HTMLElement;
 		this.detailContentEl = this.node.querySelector('#pwmMainContent') as HTMLElement;
 		this.pinOverlayEl = this.node.querySelector('#pwmPinOverlay') as HTMLElement;
 		this.pinInput = this.node.querySelector('#pwmPinInput') as HTMLInputElement;
-
-		// Bind events
-		this.searchInput.addEventListener('input', () => this.filterAndRenderList());
-		this.typeFilterSelect.addEventListener('change', () => this.filterAndRenderList());
 
 		const unlockBtn = this.node.querySelector('#pwmUnlockBtn');
 		unlockBtn?.addEventListener('click', () => this.handleUnlock());
@@ -128,38 +199,15 @@ export class KeystoreWidget extends Widget
 		{
 			if(e.key === 'Enter') this.handleUnlock();
 		});
-
-		const addBtn = this.node.querySelector('#pwmAddBtn');
-		addBtn?.addEventListener('click', () => this.createNewCredential());
-
-		const exportBtn = this.node.querySelector('#pwmExportBtn');
-		exportBtn?.addEventListener('click', () => this.exportAllCredentials());
-
-		// Drag & Drop Setup
-		const dropZone = this.node.querySelector('#pwmDropZone') as HTMLElement;
-		dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-		dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-		dropZone.addEventListener('drop', (e) =>
+		this.pinInput.addEventListener('keyup', (e) =>
 		{
-			e.preventDefault();
-			dropZone.classList.remove('dragover');
-			if(e.dataTransfer?.files)
-			{
-				this.handleFileImport(e.dataTransfer.files);
-			}
+			if(this.pinInput.value === this.currentPin) this.handleUnlock();
+			if(this.pinInput.value.length === 4) this.handleUnlock();
 		});
-		dropZone.addEventListener('click', () =>
-		{
-			const fileInput = this.node.querySelector('#pwmFileInput') as HTMLInputElement;
-			fileInput.click();
+		this._keystoreSidebar = new PasswordsSidebar(undefined, {
+			passwordsChanged: this.passwordsChanged
 		});
 
-		const fileInput = this.node.querySelector('#pwmFileInput') as HTMLInputElement;
-		fileInput.addEventListener('change', (e) =>
-		{
-			const target = e.target as HTMLInputElement;
-			if(target.files) this.handleFileImport(target.files);
-		});
 	}
 
 	private handleUnlock(): void
@@ -168,6 +216,8 @@ export class KeystoreWidget extends Widget
 		{
 			this.isUnlocked = true;
 			this.pinOverlayEl.style.display = 'none';
+			this.loadCredentials();
+			this.openSidebar();
 			this.renderDetailView();
 		} else
 		{
@@ -177,75 +227,38 @@ export class KeystoreWidget extends Widget
 		}
 	}
 
-	// --- IndexedDB Management ---
-	private initIndexedDB(): void
+	private async loadCredentials(): Promise<void>
 	{
-		const request = indexedDB.open('LuminoPasswordVault', 1);
-		request.onerror = () => console.error('IndexedDB error:', request.error);
-		request.onsuccess = () =>
+		KeyParser.db ??= await KeyParser.initIndexedDB();
+		return await new Promise((resolve, reject) =>
 		{
-			this.db = request.result;
-			this.loadCredentials();
-		};
-		request.onupgradeneeded = (event) =>
-		{
-			const db = (event.target as IDBOpenDBRequest).result;
-			if(!db.objectStoreNames.contains('credentials'))
+			if(!KeyParser.db) return reject(new Error('No db'));
+			const transaction = KeyParser.db.transaction(['credentials'], 'readonly');
+			const store = transaction.objectStore('credentials');
+			const request = store.getAll();
+
+			request.onsuccess = () =>
 			{
-				db.createObjectStore('credentials', { keyPath: 'id' });
-			}
-		};
+				this.credentials = request.result || [];
+				if(this.credentials.length === 0)
+				{
+					this.seedDefaultData();
+				}
+				this._passwordsChanged.emit(this.credentials);
+				resolve();
+			};
+			transaction.onerror = (e) => reject(e);
+		});
 	}
 
-	private loadCredentials(): void
-	{
-		if(!this.db) return;
-		const transaction = this.db.transaction(['credentials'], 'readonly');
-		const store = transaction.objectStore('credentials');
-		const request = store.getAll();
-
-		request.onsuccess = () =>
-		{
-			this.credentials = request.result || [];
-			if(this.credentials.length === 0)
-			{
-				// Seed default sample
-				this.seedDefaultData();
-			} else
-			{
-				this.filterAndRenderList();
-			}
-		};
-	}
-
-	private saveCredentialToDB(record: CredentialRecord): void
-	{
-		if(!this.db) return;
-		const transaction = this.db.transaction(['credentials'], 'readwrite');
-		const store = transaction.objectStore('credentials');
-		store.put(record);
-		transaction.oncomplete = () => this.loadCredentials();
-	}
-
-	private deleteCredentialFromDB(id: string): void
-	{
-		if(!this.db) return;
-		const transaction = this.db.transaction(['credentials'], 'readwrite');
-		const store = transaction.objectStore('credentials');
-		store.delete(id);
-		transaction.oncomplete = () =>
-		{
-			if(this.selectedCredentialId === id) this.selectedCredentialId = null;
-			this.loadCredentials();
-		};
-	}
-
-	private seedDefaultData(): void
+	private async seedDefaultData(): Promise<void>
 	{
 		const sample: CredentialRecord = {
 			id: 'rec-1',
 			title: 'Google Account',
 			type: 'login',
+			path: 'demo-data',
+			parent: '',
 			domain: 'accounts.google.com',
 			updatedAt: Date.now(),
 			fields: [
@@ -254,158 +267,30 @@ export class KeystoreWidget extends Widget
 				{ id: 'f-3', type: 'text', name: 'recovery_code', value: 'XYZ-8892-ABC' }
 			]
 		};
-		this.saveCredentialToDB(sample);
+		await KeyParser.saveCredentialToDB(sample);
+		await this.loadCredentials();
+
 	}
 
-	// --- File Ingestion & Parsing ---
-	private handleFileImport(files: FileList): void
-	{
-		Array.from(files).forEach(file =>
-		{
-			const reader = new FileReader();
-			reader.onload = (e) =>
-			{
-				const content = e.target?.result as string;
-				if(!content) return;
 
-				if(file.name.endsWith('.json'))
-				{
-					try
-					{
-						const parsed = JSON.parse(content);
-						const items = Array.isArray(parsed) ? parsed : [parsed];
-						items.forEach((item: any) =>
-						{
-							const record: CredentialRecord = {
-								id: 'imp-' + Math.random().toString(36).substring(2, 9),
-								title: item.title || file.name,
-								type: item.type || 'login',
-								domain: item.domain || 'imported.local',
-								updatedAt: Date.now(),
-								fields: item.fields || []
-							};
-							this.saveCredentialToDB(record);
-						});
-					} catch(err) { console.error('Invalid JSON format'); }
-				} else if(file.name.endsWith('.csv'))
-				{
-					const lines = content.split('\n');
-					lines.forEach((line, idx) =>
-					{
-						if(idx === 0 || !line.trim()) return; // skip header
-						const parts = line.split(',');
-						if(parts.length >= 2)
-						{
-							const record: CredentialRecord = {
-								id: 'csv-' + Math.random().toString(36).substring(2, 9),
-								title: parts[0]?.trim() || `CSV Import ${idx}`,
-								type: 'login',
-								domain: parts[1]?.trim() || 'csv.local',
-								updatedAt: Date.now(),
-								fields: [
-									{ id: 'f-1', type: 'username', name: 'username', value: parts[2]?.trim() || '' },
-									{ id: 'f-2', type: 'password', name: 'password', value: parts[3]?.trim() || '' }
-								]
-							};
-							this.saveCredentialToDB(record);
-						}
-					});
-				} else
-				{
-					// Generic HTML / API Key Text scan
-					const isApiKey = content.includes('AIza') || content.includes('key-') || content.length < 200;
-					const record: CredentialRecord = {
-						id: 'scan-' + Math.random().toString(36).substring(2, 9),
-						title: file.name,
-						type: isApiKey ? 'apikey' : 'securenote',
-						domain: 'scanned-file',
-						updatedAt: Date.now(),
-						fields: [
-							{ id: 'f-1', type: isApiKey ? 'password' : 'text', name: isApiKey ? 'api_key' : 'content_dump', value: content.trim() }
-						]
-					};
-					this.saveCredentialToDB(record);
-				}
-			};
-			reader.readAsText(file);
-		});
-	}
-
-	private exportAllCredentials(): void
-	{
-		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.credentials, null, 2));
-		const downloadAnchor = document.createElement('a');
-		downloadAnchor.setAttribute("href", dataStr);
-		downloadAnchor.setAttribute("download", `lumino_passwords_${Date.now()}.json`);
-		document.body.appendChild(downloadAnchor);
-		downloadAnchor.click();
-		downloadAnchor.remove();
-	}
 
 	// --- Filtering & Rendering ---
-	private filterAndRenderList(): void
-	{
-		const query = this.searchInput.value.toLowerCase();
-		const typeFilter = this.typeFilterSelect.value;
+	// private filterAndRenderList(): void
+	// {
+	// 	const query = this.searchInput.value.toLowerCase();
+	// 	const typeFilter = this.typeFilterSelect.value;
 
-		this.filteredCredentials = this.credentials.filter(item =>
-		{
-			const matchesType = typeFilter === 'all' || item.type === typeFilter;
-			const matchesQuery = item.title.toLowerCase().includes(query) ||
-				item.domain.toLowerCase().includes(query) ||
-				item.fields.some(f => f.name.toLowerCase().includes(query) || f.value.toLowerCase().includes(query));
-			return matchesType && matchesQuery;
-		});
+	// 	this.filteredCredentials = this.credentials.filter(item =>
+	// 	{
+	// 		const matchesType = typeFilter === 'all' || item.type === typeFilter;
+	// 		const matchesQuery = item.title.toLowerCase().includes(query) ||
+	// 			item.domain.toLowerCase().includes(query) ||
+	// 			item.fields.some(f => f.name.toLowerCase().includes(query) || f.value.toLowerCase().includes(query));
+	// 		return matchesType && matchesQuery;
+	// 	});
 
-		this.renderListUI();
-	}
-
-	private renderListUI(): void
-	{
-		this.credentialListEl.innerHTML = '';
-		if(this.filteredCredentials.length === 0)
-		{
-			this.credentialListEl.innerHTML = `<div class="pwm-empty-list">No matching credentials found</div>`;
-			return;
-		}
-
-		this.filteredCredentials.forEach(item =>
-		{
-			const isSelected = item.id === this.selectedCredentialId;
-			const card = document.createElement('div');
-			card.className = `pwm-card ${isSelected ? 'selected' : ''}`;
-			card.innerHTML = `
-                <div class="pwm-card-icon ${item.type}">
-                    <i class="${this.getTypeIcon(item.type)}"></i>
-                </div>
-                <div class="pwm-card-info">
-                    <span class="pwm-card-title">${this.escapeHTML(item.title)}</span>
-                    <span class="pwm-card-domain">${this.escapeHTML(item.domain)} • ${item.fields.length} fields</span>
-                </div>
-                <span class="pwm-badge ${item.type}">${item.type}</span>
-            `;
-			card.addEventListener('click', () =>
-			{
-				this.selectedCredentialId = item.id;
-				this.renderListUI();
-				this.renderDetailView();
-			});
-			this.credentialListEl.appendChild(card);
-		});
-	}
-
-	private getTypeIcon(type: string): string
-	{
-		switch(type)
-		{
-			case 'login': return 'bx bx-globe';
-			case 'apikey': return 'bx bx-code-block';
-			case 'securenote': return 'bx bx-note';
-			case 'card': return 'bx bx-credit-card';
-			case 'ssh': return 'bx bx-terminal';
-			default: return 'bx bx-key';
-		}
-	}
+	// 	this._passwordsChanged.emit(this.filteredCredentials)
+	// }
 
 	private getFieldTypeIcon(fieldType: string): string
 	{
@@ -421,12 +306,14 @@ export class KeystoreWidget extends Widget
 		}
 	}
 
-	private createNewCredential(): void
+	private createNewCredential(type?: CredentialType): void
 	{
 		const newRec: CredentialRecord = {
 			id: 'rec-' + Math.random().toString(36).substring(2, 9),
 			title: 'New Service Login',
-			type: 'login',
+			type: type ?? 'login',
+			path: 'password-creator',
+			parent: '',
 			domain: 'example.com',
 			updatedAt: Date.now(),
 			fields: [
@@ -434,7 +321,7 @@ export class KeystoreWidget extends Widget
 				{ id: 'f-' + Math.random(), type: 'password', name: 'password', value: '' }
 			]
 		};
-		this.saveCredentialToDB(newRec);
+
 		this.selectedCredentialId = newRec.id;
 	}
 
@@ -492,21 +379,24 @@ export class KeystoreWidget extends Widget
 
 		// Bind Detail Events
 		const saveBtn = this.detailContentEl.querySelector('#pwmSaveBtn');
-		saveBtn?.addEventListener('click', () =>
+		saveBtn?.addEventListener('click', async () =>
 		{
 			record.title = (this.detailContentEl.querySelector('#pwmEditTitle') as HTMLInputElement).value;
 			record.domain = (this.detailContentEl.querySelector('#pwmEditDomain') as HTMLInputElement).value;
 			record.type = (this.detailContentEl.querySelector('#pwmEditType') as HTMLSelectElement).value as any;
 			record.updatedAt = Date.now();
-			this.saveCredentialToDB(record);
+			await KeyParser.saveCredentialToDB(record);
+			await this.loadCredentials();
 		});
 
 		const deleteBtn = this.detailContentEl.querySelector('#pwmDeleteBtn');
-		deleteBtn?.addEventListener('click', () =>
+		deleteBtn?.addEventListener('click', async () =>
 		{
 			if(confirm(`Delete "${record.title}"?`))
 			{
-				this.deleteCredentialFromDB(record.id);
+				await KeyParser.deleteCredentialFromDB(record.id);
+				if(this.selectedCredentialId === record.id) this.selectedCredentialId = null;
+				await this.loadCredentials();
 			}
 		});
 

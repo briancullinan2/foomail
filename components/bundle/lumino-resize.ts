@@ -45,7 +45,10 @@ export const OUTLINE_WIDGET_TYPES = [
 	'HttpIndexWidget', 'PlaylistWidget',
 	'XRayPanelWidget', 'ThreadListWidget',
 	'ToolsSidebar', 'TemplateCategoryWidget',
-	'MasterListWidget', 'DownloadWidget'
+	'MasterListWidget', 'DownloadWidget',
+	'TasksSidebar', 'EmailsSidebar',
+	'CalendarSidebar', 'ContactsSidebar',
+	'BookmarksListWidget',
 ];
 
 

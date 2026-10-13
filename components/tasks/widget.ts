@@ -1,6 +1,14 @@
 import { Widget } from '@lumino/widgets';
+import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import type { LuminoMenuWindow, GlobalToolbarsWindow } from '../bundle/menu.d';
+import { TasksSidebar } from './widget-sidebar';
+import { Message } from '@lumino/messaging';
+import { ISignal, Signal } from '@lumino/signaling';
 
-export interface TaskObligation
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
+	= self as unknown as any;
+
+export interface TaskTask
 {
 	id: string;
 	title: string;
@@ -11,16 +19,16 @@ export interface TaskObligation
 	startDate: string;
 	dueDate: string;
 	estimatedHours: number;
+	isDeleted?: boolean;
 }
 
 export class TasksWidget extends Widget
 {
-	private tasks: TaskObligation[] = [];
+	private tasks: TaskTask[] = [];
 	private selectedTaskId: string | null = null;
 	private currentViewMode: 'grid' | 'gantt' = 'grid';
 
 	// UI Elements
-	private taskListEl!: HTMLElement;
 	private ganttChartEl!: HTMLElement;
 	private titleInput!: HTMLInputElement;
 	private assigneeInput!: HTMLInputElement;
@@ -31,17 +39,109 @@ export class TasksWidget extends Widget
 	private startDateInput!: HTMLInputElement;
 	private dueDateInput!: HTMLInputElement;
 	private hoursInput!: HTMLInputElement;
+	private _tasksSidebar?: TasksSidebar;
+
+	private _tasksChanged: Signal<TasksWidget, TaskTask[]> = new Signal(this);
+
+
+	private subSelected: (_: Widget, id: string) => any = (_, id) =>
+	{
+		this.selectedTaskId = id;
+		this.currentViewMode = 'grid';
+		// this.renderReaderPane();
+		const t = this.tasks.find(t => t.id === id);
+		if(t)
+		{
+			this.loadTaskIntoForm(t);
+		}
+	};
+	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
+	{
+		// this.isEditing = edit;
+		// this.renderReaderPane();
+	};
+	private subChanged: (_: Widget, items: TaskTask[]) => any = (_, items) =>
+	{
+		this.tasks = items;
+		// this.renderReaderPane();
+	};
 
 	constructor(title?: string)
 	{
 		super();
-		this.title.label = title ?? 'Task List';
+		this.title.label = title ?? 'Task Overview';
 		this.title.iconClass = 'bx bx-task';
 		this.title.closable = true;
 		this.addClass('lumino-task-gantt');
 		this.initDOM();
-		this.loadSampleObligations();
 	}
+
+
+	protected override onAfterAttach(msg: Message): void
+	{
+		super.onAfterAttach(msg);
+		if(this._tasksSidebar && !this._tasksSidebar.isAttached)
+		{
+			this.openSidebar();
+		}
+		this.resubscribeSidebar();
+	}
+
+	protected override onAfterShow(msg: Message): void
+	{
+		super.onAfterShow(msg);
+		this.openSidebar();
+		this.resubscribeSidebar();
+	}
+
+	private resubscribeSidebar()
+	{
+		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
+		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
+		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
+		this._tasksSidebar?.selectedTask.connect(this.subSelected);
+		// this._tasksSidebar?.editEmail.connect(this.subEditing);
+		this._tasksSidebar?.tasksChanged.connect(this.subChanged);
+	}
+
+
+	protected override onBeforeHide(msg: Message): void
+	{
+		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
+		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
+		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
+		this._tasksSidebar?.close();
+		super.onBeforeHide(msg);
+	}
+
+
+	protected override onBeforeDetach(msg: Message): void
+	{
+		this._tasksSidebar?.selectedTask.disconnect(this.subSelected);
+		// this._tasksSidebar?.editEmail.disconnect(this.subEditing);
+		this._tasksSidebar?.tasksChanged.disconnect(this.subChanged);
+		this._tasksSidebar?.close();
+		super.onBeforeDetach(msg);
+	}
+
+	private openSidebar()
+	{
+		const that = this;
+		setTimeout(() =>
+		{
+			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._tasksSidebar)
+			{
+				if(!this._tasksSidebar?.isAttached)
+				{
+					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._tasksSidebar, {
+						type: 'outline',
+						projectId: that._tasksSidebar?.constructor.name
+					});
+				}
+			}
+		}, 300);
+	}
+
 
 	private initDOM(): void
 	{
@@ -49,34 +149,21 @@ export class TasksWidget extends Widget
             <div class="tg-container">
                 <!-- Top Toolbar -->
                 <div class="tg-toolbar">
-                    <div class="tg-title-group">
-                        <i class="bx bx-task tg-main-icon"></i>
-                        <span>OBLIGATION_MATRIX // GANTT_ENGINE</span>
-                    </div>
                     <div class="tg-toolbar-actions">
-                        <button id="tgToggleViewBtn" class="tg-btn primary"><i class="bx bx-chart"></i> SWITCH TO GANTT</button>
+                        <button id="tgToggleViewBtn" class="tg-btn primary"><i class="bx bx-chart-stacked-rows"></i> SWITCH TO GANTT</button>
                         <button id="tgAddTaskBtn" class="tg-btn"><i class="bx bx-plus"></i> NEW OBLIGATION</button>
                         <button id="tgExportBtn" class="tg-btn"><i class="bx bx-download"></i> EXPORT TIMELINE</button>
                     </div>
                 </div>
 
                 <div class="tg-main-layout">
-                    <!-- Left Sidebar / Task Grid View -->
-                    <div class="tg-sidebar" id="tgSidebarContainer">
-                        <div class="tg-filter-bar">
-                            <input type="text" id="tgSearchInput" placeholder="Filter obligations..." />
-                        </div>
-                        <div class="tg-task-list" id="tgTaskList">
-                            <!-- Populated dynamically -->
-                        </div>
-                    </div>
 
                     <!-- Right Workspace: Grid View or Gantt Chart View -->
                     <div class="tg-workspace">
                         <div id="tgGridView" class="tg-view-panel">
                             <div class="tg-empty-state" id="tgEmptyState">
                                 <i class="bx bx-slider-alt"></i>
-                                <p>Select an obligation node from the matrix to configure timeline parameters.</p>
+                                <p>Select a task to configure timeline.</p>
                             </div>
                             <div class="tg-editor-form hidden" id="tgEditorForm">
                                 <div class="tg-form-header">
@@ -85,7 +172,7 @@ export class TasksWidget extends Widget
                                 </div>
                                 <div class="tg-form-grid">
                                     <div class="tg-field full-width">
-                                        <label>Obligation Title</label>
+                                        <label>Task Title</label>
                                         <input type="text" id="tgEditTitle" />
                                     </div>
                                     <div class="tg-field">
@@ -132,7 +219,7 @@ export class TasksWidget extends Widget
                         <!-- Gantt Timeline View -->
                         <div id="tgGanttView" class="tg-view-panel hidden">
                             <div class="tg-gantt-header-row">
-                                <span>Obligation Name</span>
+                                <span>Task Name</span>
                                 <div class="tg-timeline-ruler">
                                     <span>Oct 1</span>
                                     <span>Oct 7</span>
@@ -151,7 +238,6 @@ export class TasksWidget extends Widget
         `;
 
 		// Cache elements
-		this.taskListEl = this.node.querySelector('#tgTaskList') as HTMLElement;
 		this.ganttChartEl = this.node.querySelector('#tgGanttBars') as HTMLElement;
 		this.titleInput = this.node.querySelector('#tgEditTitle') as HTMLInputElement;
 		this.assigneeInput = this.node.querySelector('#tgEditAssignee') as HTMLInputElement;
@@ -180,47 +266,11 @@ export class TasksWidget extends Widget
 			this.progressValEl.textContent = this.progressSlider.value;
 			this.saveActiveTaskForm();
 		});
-	}
 
-	private loadSampleObligations(): void
-	{
-		this.tasks = [
-			{
-				id: 'task-1',
-				title: 'Refactor DuckDB-Wasm Thread Loader',
-				assignee: 'Brian C.',
-				priority: 'CRITICAL',
-				status: 'IN_PROGRESS',
-				progress: 65,
-				startDate: '2026-10-01',
-				dueDate: '2026-10-12',
-				estimatedHours: 24
-			},
-			{
-				id: 'task-2',
-				title: 'Configure Cloudflare Tunnels for pryor.games',
-				assignee: 'Brian C.',
-				priority: 'HIGH',
-				status: 'COMPLETED',
-				progress: 100,
-				startDate: '2026-10-03',
-				dueDate: '2026-10-06',
-				estimatedHours: 8
-			},
-			{
-				id: 'task-3',
-				title: 'Draft 100th Birthday Celebration Itinerary',
-				assignee: 'Family',
-				priority: 'NORMAL',
-				status: 'TODO',
-				progress: 20,
-				startDate: '2026-10-10',
-				dueDate: '2026-10-24',
-				estimatedHours: 12
-			}
-		];
+		this._tasksSidebar = new TasksSidebar(undefined, {
+			tasksChanged: this._tasksChanged
+		});
 
-		this.renderTaskList();
 	}
 
 	// --- DropFiles implementation for JSON task imports ---
@@ -237,7 +287,7 @@ export class TasksWidget extends Widget
 				{
 					this.tasks.push({
 						id: 'imp-' + Math.random().toString(36).substring(2, 9),
-						title: item.title || 'Imported Obligation',
+						title: item.title || 'Imported Task',
 						assignee: item.assignee || 'Unassigned',
 						priority: item.priority || 'NORMAL',
 						status: item.status || 'TODO',
@@ -249,7 +299,8 @@ export class TasksWidget extends Widget
 				});
 			} catch(err) { console.error('Failed to parse task JSON'); }
 		}
-		this.renderTaskList();
+
+		this._tasksChanged.emit([...this.tasks]);
 	}
 
 	private toggleViewMode(): void
@@ -270,40 +321,12 @@ export class TasksWidget extends Widget
 			this.currentViewMode = 'grid';
 			ganttView.classList.add('hidden');
 			gridView.classList.remove('hidden');
-			btn.innerHTML = `<i class="bx bx-chart"></i> SWITCH TO GANTT`;
-			this.renderTaskList();
+			btn.innerHTML = `<i class="bx bx-chart-stacked-rows"></i> SWITCH TO GANTT`;
+			// this.renderTaskList();
 		}
 	}
 
-	private renderTaskList(): void
-	{
-		this.taskListEl.innerHTML = '';
-		this.tasks.forEach(t =>
-		{
-			const isSelected = t.id === this.selectedTaskId;
-			const item = document.createElement('div');
-			item.className = `tg-task-item ${isSelected ? 'selected' : ''}`;
-			item.innerHTML = `
-                <div class="tg-item-top">
-                    <span class="tg-item-title">${this.escapeHTML(t.title)}</span>
-                    <span class="tg-priority-badge ${t.priority.toLowerCase()}">${t.priority}</span>
-                </div>
-                <div class="tg-item-bottom">
-                    <span>👤 ${this.escapeHTML(t.assignee)}</span>
-                    <span>⏳ ${t.progress}%</span>
-                </div>
-            `;
-			item.addEventListener('click', () =>
-			{
-				this.selectedTaskId = t.id;
-				this.renderTaskList();
-				this.loadTaskIntoForm(t);
-			});
-			this.taskListEl.appendChild(item);
-		});
-	}
-
-	private loadTaskIntoForm(t: TaskObligation): void
+	private loadTaskIntoForm(t: TaskTask): void
 	{
 		const emptyState = this.node.querySelector('#tgEmptyState') as HTMLElement;
 		const editorForm = this.node.querySelector('#tgEditorForm') as HTMLElement;
@@ -335,15 +358,14 @@ export class TasksWidget extends Widget
 		task.dueDate = this.dueDateInput.value;
 		task.estimatedHours = parseFloat(this.hoursInput.value) || 0;
 
-		const listTitle = this.taskListEl.querySelector('.tg-task-item.selected .tg-item-title');
-		if(listTitle) listTitle.textContent = task.title;
+		this._tasksChanged.emit([task]);
 	}
 
 	private createNewTask(): void
 	{
-		const newTask: TaskObligation = {
+		const newTask: TaskTask = {
 			id: 'task-' + Math.random().toString(36).substring(2, 9),
-			title: 'New Obligation Node',
+			title: 'New Task Node',
 			assignee: 'Brian C.',
 			priority: 'NORMAL',
 			status: 'TODO',
@@ -355,18 +377,18 @@ export class TasksWidget extends Widget
 		this.tasks.push(newTask);
 		this.selectedTaskId = newTask.id;
 		if(this.currentViewMode === 'gantt') this.toggleViewMode(); // back to grid
-		this.renderTaskList();
 		this.loadTaskIntoForm(newTask);
 	}
 
 	private deleteSelectedTask(): void
 	{
 		if(!this.selectedTaskId) return;
+		const toDelete = this.tasks.filter(t => t.id === this.selectedTaskId);
 		this.tasks = this.tasks.filter(t => t.id !== this.selectedTaskId);
 		this.selectedTaskId = null;
 		this.node.querySelector('#tgEmptyState')?.classList.remove('hidden');
 		this.node.querySelector('#tgEditorForm')?.classList.add('hidden');
-		this.renderTaskList();
+		this._tasksChanged.emit(toDelete.map((t: TaskTask) => { t.isDeleted = true; return t; }));
 	}
 
 	private renderGanttChart(): void
@@ -374,7 +396,7 @@ export class TasksWidget extends Widget
 		this.ganttChartEl.innerHTML = '';
 		if(this.tasks.length === 0)
 		{
-			this.ganttChartEl.innerHTML = `<div class="tg-empty-state"><p>No obligations to render on timeline.</p></div>`;
+			this.ganttChartEl.innerHTML = `<div class="tg-empty-state"><p>No tasks to render on timeline.</p></div>`;
 			return;
 		}
 
@@ -413,7 +435,7 @@ export class TasksWidget extends Widget
 		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.tasks, null, 2));
 		const a = document.createElement('a');
 		a.href = dataStr;
-		a.download = `nexus_obligations_${Date.now()}.json`;
+		a.download = `nexus_tasks_${Date.now()}.json`;
 		document.body.appendChild(a);
 		a.click();
 		a.remove();
