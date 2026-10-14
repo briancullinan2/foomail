@@ -93,7 +93,7 @@ export class ChatStorageEngine
 	 */
 	private async getCurrentDBVersion(): Promise<number>
 	{
-		return new Promise((resolve) =>
+		return await new Promise((resolve) =>
 		{
 			const req = indexedDB.open(this.dbName);
 			req.onsuccess = () =>
@@ -127,7 +127,7 @@ export class ChatStorageEngine
 			this.db = null;
 		}
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			const nextVersion = currentVersion + 1;
 			const req = indexedDB.open(this.dbName, nextVersion);
@@ -181,7 +181,7 @@ export class ChatStorageEngine
 
 		if(!this.db) return [];
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			const tx = this.db!.transaction(ChatStorageEngine.META_STORE, 'readonly');
 			const store = tx.objectStore(ChatStorageEngine.META_STORE);
@@ -208,7 +208,7 @@ export class ChatStorageEngine
 			return;
 		}
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			if(!this.db) return reject(new Error('Database context unavailable'));
 			const tx = this.db.transaction(ChatStorageEngine.META_STORE, 'readwrite');
@@ -230,7 +230,7 @@ export class ChatStorageEngine
 
 		if(!this.db) return;
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			const tx = this.db!.transaction(ChatStorageEngine.META_STORE, 'readwrite');
 			const store = tx.objectStore(ChatStorageEngine.META_STORE);
@@ -254,7 +254,7 @@ export class ChatStorageEngine
 			return [];
 		}
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			const tx = this.db!.transaction(storeName, 'readonly');
 			const store = tx.objectStore(storeName);
@@ -282,7 +282,7 @@ export class ChatStorageEngine
 			return;
 		}
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			if(!this.db) return reject(new Error('Database context unavailable'));
 			const tx = this.db.transaction(storeName, 'readwrite');
@@ -299,7 +299,7 @@ export class ChatStorageEngine
 		await this.ensureThreadStore(threadId);
 		const storeName = `thread_${threadId}`;
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			if(!this.db) return reject(new Error('Database context unavailable'));
 			const tx = this.db.transaction(storeName, 'readwrite');
@@ -328,7 +328,7 @@ export class ChatStorageEngine
 
 		if(!this.db || !this.db.objectStoreNames.contains(storeName)) return;
 
-		return new Promise((resolve, reject) =>
+		return await new Promise((resolve, reject) =>
 		{
 			const tx = this.db!.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);

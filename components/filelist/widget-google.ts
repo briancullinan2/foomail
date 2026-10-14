@@ -29,7 +29,6 @@ export class GoogleDriveWidget extends FileListWidget implements IErrorEvent, IF
 	private _errorOccurred = new Signal<GoogleDriveWidget, WidgetErrorEventArgs>(this);
 	private _filesSignal = new Signal<GoogleDriveWidget, WidgetFilesEventArgs>(this);
 	private static _debounceQueries: Record<string, Promise<GoogleDriveFile[] | undefined>> = {};
-	private failed: boolean = false;
 
 	get errorOccurred(): ISignal<GoogleDriveWidget, WidgetErrorEventArgs>
 	{
@@ -53,12 +52,9 @@ export class GoogleDriveWidget extends FileListWidget implements IErrorEvent, IF
 
 	public processMessage(msg: Message): void
 	{
-		if(this.failed)
-		{
-			return super.processMessage(msg);
-		}
 		if(msg.type === 'close-request')
 		{
+			// reset error occured listeners because they won't be receiving more from this
 			this._errorOccurred = new Signal<GoogleDriveWidget, WidgetErrorEventArgs>(this);
 		}
 
@@ -417,7 +413,7 @@ export class GoogleDriveWidget extends FileListWidget implements IErrorEvent, IF
 					source: this,
 					error: err instanceof Error ? err : String(err),
 				});
-				this.failed = true;
+				this._failed = true;
 				return;
 			}
 		}

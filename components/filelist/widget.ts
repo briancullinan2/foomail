@@ -13,10 +13,11 @@ import type { FileSystemWindow, LuminoLayoutWindow } from '../bundle/lumino.d';
 import type { GlobalToolbarsWindow } from '../bundle/menu.d';
 import type { BuildWindow } from '../bundle/make.d';
 import type { GitHubFileEntry } from '../bundle/github-types';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
 const filelistSelf: FilelistWindow & LuminoLayoutWindow & GlobalToolbarsWindow & FileSystemWindow
-	& BuildWindow = self as unknown as any;
+	& BuildWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
 if(!filelistSelf.fileListWidgets)
@@ -25,7 +26,7 @@ if(!filelistSelf.fileListWidgets)
 }
 
 
-export class FileListWidget extends Widget implements IFileDataProvider
+export class FileListWidget extends filelistSelf.SingletonSidebarWidget implements IFileDataProvider
 {
 	protected treeContainerId: string;
 	container?: HTMLDivElement;
@@ -44,17 +45,12 @@ export class FileListWidget extends Widget implements IFileDataProvider
 
 	constructor(titleStr?: string, source?: string)
 	{
-		super();
+		super(FileListWidget.name, titleStr);
 		this.id = `filelist-panel-${filelistSelf.nextTemp?.()}`;
-		if(titleStr)
-		{
-			this.title.label = titleStr;
-		}
 		if(filelistSelf.fileListWidgets)
 		{
 			filelistSelf.fileListWidgets[filelistSelf.fileListWidgets.length] = this;
 		}
-		this.title.closable = true;
 		this.node.style.minWidth = '200px';
 		this.addClass('ide-file-tree-widget');
 		if(source)
@@ -67,21 +63,6 @@ export class FileListWidget extends Widget implements IFileDataProvider
 			this.renderAndLoad();
 		});
 	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			console.log('Intercepted close request, hiding instead: ' + this.title.label);
-
-			this.hide();
-			filelistSelf.mainDock?.layout?.removeWidget(this);
-			return; // BAIL OUT: Avoid calling super.processMessage() to prevent disposal
-		}
-
-		super.processMessage(msg);
-	}
-
 
 	public get defaultRepository()
 	{

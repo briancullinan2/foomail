@@ -39,11 +39,15 @@ export const DB_SCHEME: SchemaStoreConfig[] = [
 			item1: 'path',
 			item2: [
 				{ key: 'timestamp', value: 'timestamp' },
-				{ key: 'parent', value: 'parent' }
+				{ key: 'mode', value: 'mode' },
+				{ key: 'parent', value: 'parent' },
+				{ key: 'contents', value: 'contents' },
+				{ key: 'sha', value: 'sha' },
 			]
 		}
 	}
 ];
+
 
 const getBounceRegistry: Record<string, Record<string, DebounceToken>> = {
 	'put': {},

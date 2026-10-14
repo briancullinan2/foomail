@@ -22,6 +22,7 @@ import type { GithubService } from "./github-worker";
 import type { EditToolbar } from "./menu-edit";
 import type { ViewToolbar } from "./menu-view";
 import type { LayoutToolbar } from "./menu-layout";
+import type { WidgetWithSearchBar } from "./widget-search";
 
 // ============================================================================
 // 1. TOOLBARS & COMPONENT INSTANCES / CONSTRUCTORS
@@ -82,6 +83,7 @@ export interface GlobalToolbarsWindow
 	layoutToolbar?: LayoutToolbar;
 	LayoutToolbar?: typeof LayoutToolbar;
 
+	WidgetWithSearchBar: typeof WidgetWithSearchBar;
 }
 
 // ============================================================================
@@ -106,6 +108,7 @@ export interface RepositorySettingsWindow
 	MODULE_REGISTRY?: Record<string, ComponentRoute>;
 	TOOLS_REGISTRY?: Record<string, ComponentRoute>;
 	TERMINAL_REGISTRY?: TerminalFilter[];
+	OUTLINE_WIDGET_TYPES: string[];
 
 	updateSelectOptions?: (
 		elementId: string | Element | undefined | null,

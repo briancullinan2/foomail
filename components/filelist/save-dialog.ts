@@ -67,10 +67,10 @@ export class GitHubSaveFileDialog
 		this.historyStack = [[...this.currentPath]];
 	}
 
-	public open(defaultName: string = 'Untitled.ts'): Promise<SaveDialogResult | null>
+	public async open(defaultName: string = 'Untitled.ts'): Promise<SaveDialogResult | null>
 	{
 		this.selectedFileName = defaultName;
-		return new Promise((resolve) =>
+		return await new Promise((resolve) =>
 		{
 			this.resolvePromise = resolve;
 			this.render();

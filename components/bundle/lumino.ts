@@ -2,6 +2,9 @@ import './logging';
 import './levenshtein';
 import './lumino-search';
 import './github-worker';
+import '../proxy/websocket';
+import './widget-extensions';
+import { GlobalDropManager } from '../tools/drag-and-drop';
 import { BoxPanel, DockPanel, Widget, Menu, MenuBar } from '@lumino/widgets';
 import * as commands from '@lumino/commands';
 import * as widgets from '@lumino/widgets';
@@ -22,6 +25,7 @@ import type { LuminoLayoutWindow } from './lumino.d';
 import type { LuminoMenuWindow, RepositorySettingsWindow } from './menu.d';
 import { updateHashFromWidget } from './lumino-widget';
 import { SplashScreenWidget } from './splash';
+import { LayoutManager } from 'fabric';
 
 
 const luminoSelf: LuminoLayoutWindow & LuminoMenuWindow & RepositorySettingsWindow = self as unknown as any;
@@ -54,6 +58,7 @@ function main(): void
 	});
 	mainDock.id = 'main-workspace';
 	luminoSelf.mainDock = mainDock;
+	GlobalDropManager.init();
 
 	// Generate the top application header structures using our unified layout export
 	const { headerRow, menuBar } = createTopBar(commandRegistry);
@@ -100,7 +105,10 @@ function main(): void
 	{
 		const remainingWidgets = Array.from(mainDock.widgets());
 		console.log('Dock layout updated. Remaining widget count:', remainingWidgets.length);
-		luminoSelf.resizeHandler?.();
+		if(!ResponsiveManager.getInstance().alreadyResizing)
+		{
+			luminoSelf.resizeHandler?.();
+		}
 	});
 
 

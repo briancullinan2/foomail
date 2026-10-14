@@ -380,3 +380,84 @@
 	font-size: 3rem;
 	margin-bottom: 12px;
 }
+
+/* Global Full-Screen Coverall Drop Overlay */
+.global-drop-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(15, 23, 42, 0.85);
+	backdrop-filter: blur(6px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 99999;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.global-drop-overlay.active {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.global-drop-card {
+	background: #1e293b;
+	border: 2px dashed #38bdf8;
+	padding: 3rem 4rem;
+	border-radius: 20px;
+	text-align: center;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+	animation: globalDropPulse 2s infinite ease-in-out;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.global-drop-icon {
+	font-size: 5rem;
+	color: #38bdf8;
+}
+
+.global-drop-card h2 {
+	margin: 0;
+	font-size: 1.75rem;
+	font-weight: 600;
+	color: #f8fafc;
+	font-family: system-ui, -apple-system, sans-serif;
+}
+
+.global-drop-card p {
+	margin: 0;
+	color: #94a3b8;
+	font-size: 0.95rem;
+	font-family: system-ui, -apple-system, sans-serif;
+}
+
+@keyframes globalDropPulse {
+
+	0%,
+	100% {
+		transform: scale(1);
+		border-color: #38bdf8;
+	}
+
+	50% {
+		transform: scale(1.02);
+		border-color: #7dd3fc;
+	}
+}
+
+/* Local Target Zone helper styling */
+.dropzone-target {
+	transition: all 0.2s ease;
+}
+
+.dropzone-target.dragover {
+	border-color: #38bdf8 !important;
+	background: rgba(56, 189, 248, 0.08) !important;
+}
