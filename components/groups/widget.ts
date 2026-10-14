@@ -3,6 +3,7 @@ import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 export interface IContact
 {
@@ -22,14 +23,13 @@ export interface IContactGroup
 }
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class GroupsWidget extends Widget
+export class GroupsWidget extends widgetSelf.GenericSearchableWidget
 {
 	private contacts: IContact[] = [];
 	private groups: IContactGroup[] = [];
 	private selectedGroupId: string | null = 'grp-1';
-	private searchInput!: HTMLInputElement;
 	private directoryListEl!: HTMLElement;
 	private groupsListEl!: HTMLElement;
 	private groupMembersEl!: HTMLElement;
@@ -202,10 +202,10 @@ export class GroupsWidget extends Widget
 
 	private renderDirectory(): void
 	{
-		const query = this.searchInput.value.toLowerCase();
-		const filtered = this.contacts.filter(c =>
+		const query = this.searchInput?.value.toLowerCase();
+		const filtered = query ? this.contacts.filter(c =>
 			c.name.toLowerCase().includes(query) || c.email.toLowerCase().includes(query) || (c.company && c.company.toLowerCase().includes(query))
-		);
+		) : this.contacts;
 
 		this.directoryListEl.innerHTML = '';
 		if(filtered.length === 0)
@@ -353,12 +353,5 @@ export class GroupsWidget extends Widget
 			this.renderAll();
 			this._groupsChanged.emit(this.groups);
 		}
-	}
-
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
 	}
 }

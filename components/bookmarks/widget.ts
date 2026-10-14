@@ -16,9 +16,7 @@ export class BookmarksWidget extends bookmarksSelf.AutoSidebarWidget<BookmarksLi
 	private allBookmarks: IBookmarkNode[] = [];
 	private targetFolderTree: string[] = ['Bookmarks Bar', 'Bookmarks Bar/Dev', 'Other Bookmarks'];
 	private activeFilter: BookmarksDeltaFilter = 'all';
-	private viewMode: 'cards' | 'grid' = 'cards';
 	private selectedBookmark: IBookmarkNode | null = null;
-	public _toggleBtn?: HTMLElement | HTMLDivElement;
 
 	constructor(title?: string)
 	{
@@ -32,39 +30,6 @@ export class BookmarksWidget extends bookmarksSelf.AutoSidebarWidget<BookmarksLi
 		this.renderLayout();
 	}
 
-	protected override onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		setTimeout(() =>
-		{
-			bookmarksSelf.WidgetSearchBar.attachToggleIcon(this, this.renderToggleBtn, this.clickToggleBtn);
-		}, 200);
-	}
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		if(this._toggleBtn)
-		{
-			this._toggleBtn?.remove();
-			this._toggleBtn = undefined;
-		}
-		super.onBeforeDetach(msg);
-	}
-
-	protected renderToggleBtn(toggle: HTMLElement)
-	{
-		toggle.innerHTML = `<i class="bx ${this.viewMode === 'grid' ? 'bx-list' : 'bx-grid'}"></i>`;
-		toggle.title = this.viewMode === 'grid' ? 'List View' : 'Cards View';
-	}
-
-
-	protected clickToggleBtn()
-	{
-		this.viewMode = this.viewMode === 'grid' ? 'cards' : 'grid';
-		this.renderLayout();
-		this.fit();
-		this.update();
-	}
 
 	/**
 	 * Main DOM Shell Construction
@@ -249,8 +214,4 @@ export class BookmarksWidget extends bookmarksSelf.AutoSidebarWidget<BookmarksLi
 	}
 
 
-	private escapeHtml(str: string): string
-	{
-		return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-	}
 }

@@ -348,10 +348,4 @@ export class TasksWidget extends widgetSelf.WithChangingWidget<TasksWidget, Task
 		a.remove();
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

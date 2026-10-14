@@ -5,6 +5,7 @@ import type * as openpgp from 'openpgp';
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
 import './openpgp.min.js';
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions.js";
 
 
 export interface IPgpKeyProfile
@@ -19,12 +20,12 @@ export interface IPgpKeyProfile
 	isEncrypted: boolean;
 }
 
-const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow & {
-	openpgp: typeof openpgp;
-}
-	= self as unknown as any;
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
+	& WidgetExtensionsWindow & {
+		openpgp: typeof openpgp;
+	} = self as unknown as any;
 
-export class PGPConfigWidget extends Widget
+export class PGPConfigWidget extends widgetSelf.GenericSearchableWidget
 {
 	private loadedKeys: IPgpKeyProfile[] = [];
 	private dropZoneEl!: HTMLElement;
@@ -342,10 +343,4 @@ export class PGPConfigWidget extends Widget
 		});
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

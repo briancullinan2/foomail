@@ -345,17 +345,6 @@ export class SearchListWidget extends FileListWidget
 		} as any;
 	}
 
-	private escapeHtml(str: string): string
-	{
-		if(typeof str !== 'string') return '';
-		return str
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#039;');
-	}
-
 	protected override onBeforeDetach(msg: Message): void
 	{
 		if(this.currentCallbackId)

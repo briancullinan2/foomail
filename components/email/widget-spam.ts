@@ -1,8 +1,7 @@
-import { Widget } from "@lumino/widgets";
-import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 export interface ISpamFilterFeed
 {
@@ -17,38 +16,29 @@ export interface ISpamFilterFeed
 }
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class SpamGuardWidget extends Widget
+export class SpamGuardWidget extends widgetSelf.WithChangingWidget<SpamGuardWidget, ISpamFilterFeed>
 {
-	private feeds: ISpamFilterFeed[] = [];
-	private feedsContainerEl!: HTMLElement;
 	private sandboxInput!: HTMLTextAreaElement;
 	private sandboxResultEl!: HTMLElement;
 
-	private _filtersChanged: Signal<SpamGuardWidget, ISpamFilterFeed[]> = new Signal(this);
-	public get filtersChanged(): ISignal<SpamGuardWidget, ISpamFilterFeed[]> { return this._filtersChanged; }
 
-	constructor(title?: string)
+	constructor(title?: string, options?: IMainpanelOptions<SpamGuardWidget, ISpamFilterFeed[]>)
 	{
-		super();
-		this.title.label = title ?? 'Spam Filter';
-		this.title.iconClass = 'bx bx-shield-alt-2';
-		this.title.closable = true;
-
-		this.initDefaultFeeds();
+		super(title, options);
 		this.initDom();
 	}
 
 	protected override onAfterAttach(msg: Message): void
 	{
 		super.onAfterAttach(msg);
-		this.renderFeeds();
+		this.initDefaultFeeds();
 	}
 
 	private initDefaultFeeds(): void
 	{
-		this.feeds = [
+		this.items = [
 			{
 				id: 'feed-1',
 				name: 'Spamhaus DROP / Extended BL',
@@ -90,116 +80,48 @@ export class SpamGuardWidget extends Widget
 				sourceUrl: 'https://github.com/yokoffing/filterlists'
 			}
 		];
+		this._itemsChanged.emit(this.items);
+		this.filterAndRender();
 	}
 
 	private initDom(): void
 	{
 		this.addClass('sf-editor-root');
+		this.addClass('sf-panel');
 		this.node.innerHTML = `
-            <div class="sf-layout-container">
-                <!-- Left Pane: Open Filter Feeds & Lists -->
-                <div class="sf-panel sf-feeds-panel">
-                    <div class="sf-panel-header">
-                        <h3><i class="bx bx-globe"></i> Community & Open Filter Feeds</h3>
-                        <button id="sfAddCustomFeedBtn" class="sf-btn-icon" title="Add Custom Feed URL"><i class="bx bx-plus"></i></button>
-                    </div>
-                    <div class="sf-feeds-list" id="sfFeedsList">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
+			<p class="sf-sandbox-desc">Test incoming email headers, snippets, or raw payloads against your active open filter feeds and regex rulesets in real time.</p>
 
-                <!-- Right Pane: Rule Customizer & Live Testing Sandbox -->
-                <div class="sf-panel sf-sandbox-panel">
-                    <div class="sf-panel-header">
-                        <h3><i class="bx bx-vial"></i> Live Spam Sandbox & Match Simulator</h3>
-                    </div>
-                    <div class="sf-sandbox-body">
-                        <p class="sf-sandbox-desc">Test incoming email headers, snippets, or raw payloads against your active open filter feeds and regex rulesets in real time.</p>
-
-                        <div class="sf-form-group">
-                            <label>Test Message Raw Headers / Snippet</label>
-                            <textarea id="sfSandboxInput" class="sf-textarea" rows="6" placeholder="From: rogue@botnet-zombie.com\nSubject: Claim your free crypto reward now!\nMessage-ID: <xyz998877@mailer.biz>">From: alert@secure-bank-login-update.com
+			<div class="sf-form-group">
+				<label>Test Message Raw Headers / Snippet</label>
+				<textarea id="sfSandboxInput" class="sf-textarea" rows="6" placeholder="From: rogue@botnet-zombie.com\nSubject: Claim your free crypto reward now!\nMessage-ID: <xyz998877@mailer.biz>">From: alert@secure-bank-login-update.com
 Subject: Urgent: Verify your banking credentials immediately or account suspended!
 X-Spam-Warning: High entropy sender domain detected.</textarea>
-                        </div>
+			</div>
 
-                        <button id="sfRunTestBtn" class="sf-btn primary"><i class="bx bx-play-circle"></i> Run Filter Evaluation</button>
+			<button id="sfRunTestBtn" class="sf-btn primary"><i class="bx bx-play-circle"></i> Run Filter Evaluation</button>
 
-                        <div class="sf-result-box" id="sfSandboxResult">
-                            <div class="sf-result-placeholder">Run evaluation to inspect spam score and rule matches.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+			<div class="sf-result-box" id="sfSandboxResult">
+				<div class="sf-result-placeholder">Run evaluation to inspect spam score and rule matches.</div>
+			</div>`;
 
-		this.feedsContainerEl = this.node.querySelector('#sfFeedsList') as HTMLElement;
 		this.sandboxInput = this.node.querySelector('#sfSandboxInput') as HTMLTextAreaElement;
 		this.sandboxResultEl = this.node.querySelector('#sfSandboxResult') as HTMLElement;
 
 		this.node.querySelector('#sfRunTestBtn')?.addEventListener('click', () => this.runSandboxEvaluation());
-
-		this.node.querySelector('#sfAddCustomFeedBtn')?.addEventListener('click', () =>
-		{
-			const name = prompt('Enter Feed Name:');
-			const url = prompt('Enter Feed URL (HTTPS):');
-			if(name && url)
-			{
-				const newFeed: ISpamFilterFeed = {
-					id: 'custom-' + Math.random().toString(36).substring(2, 9),
-					name: name.trim(),
-					provider: 'Custom User Feed',
-					description: `User subscribed list from ${url}`,
-					ruleCount: 500,
-					category: 'Domain & URL',
-					enabled: true,
-					sourceUrl: url
-				};
-				this.feeds.push(newFeed);
-				this.renderFeeds();
-				this._filtersChanged.emit(this.feeds);
-			}
+		this._sidebarWidget = new SpamSidebar(undefined, {
+			itemsChanged: this._itemsChanged
 		});
 	}
 
-	private renderFeeds(): void
+	protected filterAndRender(): void
 	{
-		this.feedsContainerEl.innerHTML = '';
-		this.feeds.forEach(feed =>
-		{
-			const item = document.createElement('div');
-			item.className = `sf-feed-card ${feed.enabled ? 'active' : ''}`;
-			item.innerHTML = `
-                <div class="sf-feed-top">
-                    <span class="sf-feed-title">${this.escapeHTML(feed.name)}</span>
-                    <label class="sf-toggle">
-                        <input type="checkbox" ${feed.enabled ? 'checked' : ''} data-id="${feed.id}" />
-                        <span class="sf-slider"></span>
-                    </label>
-                </div>
-                <span class="sf-feed-provider">${this.escapeHTML(feed.provider)} • <span class="sf-count">${feed.ruleCount.toLocaleString()} rules</span></span>
-                <p class="sf-feed-desc">${this.escapeHTML(feed.description)}</p>
-                <div class="sf-feed-tag-row">
-                    <span class="sf-tag ${feed.category.toLowerCase().replace(/[\s&]/g, '-')}">${feed.category}</span>
-                </div>
-            `;
 
-			const checkbox = item.querySelector('input') as HTMLInputElement;
-			checkbox.addEventListener('change', () =>
-			{
-				feed.enabled = checkbox.checked;
-				item.classList.toggle('active', feed.enabled);
-				this._filtersChanged.emit(this.feeds);
-			});
-
-			this.feedsContainerEl.appendChild(item);
-		});
 	}
 
 	private runSandboxEvaluation(): void
 	{
 		const text = this.sandboxInput.value.toLowerCase();
-		const activeFeeds = this.feeds.filter(f => f.enabled);
+		const activeFeeds = this.items?.filter(f => f.enabled) ?? [];
 
 		let spamScore = 0.0;
 		const matches: string[] = [];
@@ -237,10 +159,86 @@ X-Spam-Warning: High entropy sender domain detected.</textarea>
         `;
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }
+
+export class SpamSidebar extends widgetSelf.SidebarChangeWidget<SpamGuardWidget, ISpamFilterFeed>
+{
+	private feedsContainerEl!: HTMLElement;
+
+	constructor(title?: string, options?: IMainpanelOptions<SpamGuardWidget, ISpamFilterFeed[]>)
+	{
+		super(SpamSidebar.name, title ?? 'Open Filters', options);
+		this.addClass('sf-panel');
+		this.initDom();
+	}
+
+	private initDom()
+	{
+		this.node.innerHTML = `
+			<button id="sfAddCustomFeedBtn" class="sf-btn-icon" title="Add Custom Feed URL"><i class="bx bx-plus"></i> Add Custom Feed</button>
+			<div class="sf-feeds-list" id="sfFeedsList">
+				<!-- Populated dynamically -->
+			</div>`;
+
+		this.feedsContainerEl = this.node.querySelector('#sfFeedsList') as HTMLElement;
+
+		this.node.querySelector('#sfAddCustomFeedBtn')?.addEventListener('click', () =>
+		{
+			const name = prompt('Enter Feed Name:');
+			const url = prompt('Enter Feed URL (HTTPS):');
+			if(name && url)
+			{
+				const newFeed: ISpamFilterFeed = {
+					id: 'custom-' + Math.random().toString(36).substring(2, 9),
+					name: name.trim(),
+					provider: 'Custom User Feed',
+					description: `User subscribed list from ${url}`,
+					ruleCount: 500,
+					category: 'Domain & URL',
+					enabled: true,
+					sourceUrl: url
+				};
+				this.items?.push(newFeed);
+				this.filterAndRender();
+				this._itemsChanged.emit(this.items ?? []);
+			}
+		});
+	}
+
+
+	protected filterAndRender(): void
+	{
+		this.feedsContainerEl.innerHTML = '';
+		this.items?.forEach(feed =>
+		{
+			const item = document.createElement('div');
+			item.className = `sf-feed-card ${feed.enabled ? 'active' : ''}`;
+			item.innerHTML = `
+                <div class="sf-feed-top">
+                    <span class="sf-feed-title">${this.escapeHTML(feed.name)}</span>
+                    <label class="sf-toggle">
+                        <input type="checkbox" ${feed.enabled ? 'checked' : ''} data-id="${feed.id}" />
+                        <span class="sf-slider"></span>
+                    </label>
+                </div>
+                <span class="sf-feed-provider">${this.escapeHTML(feed.provider)} • <span class="sf-count">${feed.ruleCount.toLocaleString()} rules</span></span>
+                <p class="sf-feed-desc">${this.escapeHTML(feed.description)}</p>
+                <div class="sf-feed-tag-row">
+                    <span class="sf-tag ${feed.category.toLowerCase().replace(/[\s&]/g, '-')}">${feed.category}</span>
+                </div>`;
+
+			const checkbox = item.querySelector('input') as HTMLInputElement;
+			checkbox.addEventListener('change', () =>
+			{
+				feed.enabled = checkbox.checked;
+				item.classList.toggle('active', feed.enabled);
+				this._itemsChanged.emit(this.items ?? []);
+			});
+
+			this.feedsContainerEl.appendChild(item);
+		});
+	}
+
+}
+
+

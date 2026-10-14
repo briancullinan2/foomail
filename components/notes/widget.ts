@@ -1,4 +1,7 @@
 import { Widget } from '@lumino/widgets';
+import type { IMainpanelOptions, WidgetExtensionsWindow } from '../bundle/widget-extensions';
+import { Message } from '@lumino/messaging';
+import { NotesSidebar } from './widget-sidebar';
 
 export interface JournalEntry
 {
@@ -11,14 +14,13 @@ export interface JournalEntry
 	wordCount: number;
 }
 
-export class NotesWidget extends Widget
+const widgetSelf: WidgetExtensionsWindow = self as unknown as any;
+
+export class NotesWidget extends widgetSelf.WithChangingWidget<NotesWidget, JournalEntry>
 {
-	private entries: JournalEntry[] = [];
-	private selectedEntryId: string | null = null;
 	private isPreviewMode: boolean = false;
 
 	// UI Elements
-	private entryListEl!: HTMLElement;
 	private editorEl!: HTMLTextAreaElement;
 	private previewEl!: HTMLElement;
 	private titleInput!: HTMLInputElement;
@@ -28,79 +30,52 @@ export class NotesWidget extends Widget
 	private charCountEl!: HTMLElement;
 	private timeStampEl!: HTMLElement;
 
-	constructor(title?: string)
+	constructor(title?: string, options?: IMainpanelOptions<NotesWidget, JournalEntry[]>)
 	{
-		super();
-		this.title.label = title ?? 'Notes/Journal';
-		this.title.iconClass = 'bx bx-note-book';
-		this.title.closable = true;
+		super(title, options);
 		this.addClass('lumino-terminal-journal');
 		this.initDOM();
-		this.loadDefaultLogs();
 	}
 
 	private initDOM(): void
 	{
+		this.addClass('tj-container');
 		this.node.innerHTML = `
-            <div class="tj-container crt-overlay">
-                <!-- Top Status Banner -->
-                <div class="tj-header-bar">
-                    <div class="tj-sys-info">
-                        <span class="tj-prompt">&gt; NEXUS_LOG_OS v4.0.2</span>
-                        <span class="tj-status-online">● SYS_READY</span>
-                    </div>
-                    <div class="tj-header-actions">
-                        <button id="tjNewLogBtn" class="tj-btn primary"><i class="bx bx-plus-circle"></i> NEW_LOG</button>
-                        <button id="tjTogglePreviewBtn" class="tj-btn"><i class="bx bx-code-alt"></i> TOGGLE_VIEW</button>
-                        <button id="tjTimestampBtn" class="tj-btn"><i class="bx bx-time-five"></i> INJECT_STAMP</button>
-                        <button id="tjExportBtn" class="tj-btn"><i class="bx bx-download"></i> EXPORT_LOGS</button>
-                    </div>
-                </div>
+			<div class="tj-header-bar">
+				<button id="tjNewLogBtn" class="tj-btn primary"><i class="bx bx-plus-circle"></i> NEW_LOG</button>
+				<button id="tjTogglePreviewBtn" class="tj-btn"><i class="bx bx-code-alt"></i> TOGGLE_VIEW</button>
+				<button id="tjTimestampBtn" class="tj-btn"><i class="bx bx-time-five"></i> INJECT_STAMP</button>
+				<button id="tjExportBtn" class="tj-btn"><i class="bx bx-download"></i> EXPORT_LOGS</button>
+			</div>
 
-                <div class="tj-main-layout">
-                    <!-- Left Sidebar Log Registry -->
-                    <div class="tj-sidebar">
-                        <div class="tj-sidebar-header">
-                            <span>// LOG_DIRECTORY</span>
-                        </div>
-                        <div class="tj-log-list" id="tjLogList">
-                            <!-- Populated dynamically -->
-                        </div>
-                    </div>
+			<div class="tj-workspace">
+				<div class="tj-metadata-strip">
+					<input type="text" id="tjTitleInput" placeholder="ENTRY_TITLE..." />
+					<select id="tjMoodSelect">
+						<option value="SYSTEM_STABLE">⚡ SYSTEM_STABLE</option>
+						<option value="DEEP_FOCUS">🎯 DEEP_FOCUS</option>
+						<option value="NEURAL_OVERLOAD">⚠️ NEURAL_OVERLOAD</option>
+						<option value="CRITICAL_BUG">🔥 CRITICAL_BUG</option>
+					</select>
+					<input type="text" id="tjTagsInput" placeholder="TAGS (comma separated)..." />
+				</div>
 
-                    <!-- Right Workspace / Editor Area -->
-                    <div class="tj-workspace">
-                        <div class="tj-metadata-strip">
-                            <input type="text" id="tjTitleInput" placeholder="ENTRY_TITLE..." />
-                            <select id="tjMoodSelect">
-                                <option value="SYSTEM_STABLE">⚡ SYSTEM_STABLE</option>
-                                <option value="DEEP_FOCUS">🎯 DEEP_FOCUS</option>
-                                <option value="NEURAL_OVERLOAD">⚠️ NEURAL_OVERLOAD</option>
-                                <option value="CRITICAL_BUG">🔥 CRITICAL_BUG</option>
-                            </select>
-                            <input type="text" id="tjTagsInput" placeholder="TAGS (comma separated)..." />
-                        </div>
+				<!-- Editor & Preview Frames -->
+				<div class="tj-editor-wrapper">
+					<textarea id="tjEditor" placeholder="// Initialize thoughts... Markdown supported..."></textarea>
+					<div id="tjPreview" class="tj-preview-pane hidden"></div>
+				</div>
 
-                        <!-- Editor & Preview Frames -->
-                        <div class="tj-editor-wrapper">
-                            <textarea id="tjEditor" placeholder="// Initialize thoughts... Markdown supported..."></textarea>
-                            <div id="tjPreview" class="tj-preview-pane hidden"></div>
-                        </div>
-
-                        <!-- Telemetry Footer Bar -->
-                        <div class="tj-telemetry-bar">
-                            <span>WORDS: <strong id="tjWordCount">0</strong></span>
-                            <span>CHARS: <strong id="tjCharCount">0</strong></span>
-                            <span>LAST_UPDATED: <strong id="tjTimestamp">--:--:--</strong></span>
-                            <span class="tj-ascii-pulse">█▒▒▒▒▒▒▒▒▒</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+				<!-- Telemetry Footer Bar -->
+				<div class="tj-telemetry-bar">
+					<span>WORDS: <strong id="tjWordCount">0</strong></span>
+					<span>CHARS: <strong id="tjCharCount">0</strong></span>
+					<span>LAST_UPDATED: <strong id="tjTimestamp">--:--:--</strong></span>
+					<span class="tj-ascii-pulse">█▒▒▒▒▒▒▒▒▒</span>
+				</div>
+			</div>`;
 
 		// Cache elements
-		this.entryListEl = this.node.querySelector('#tjLogList') as HTMLElement;
 		this.editorEl = this.node.querySelector('#tjEditor') as HTMLTextAreaElement;
 		this.previewEl = this.node.querySelector('#tjPreview') as HTMLElement;
 		this.titleInput = this.node.querySelector('#tjTitleInput') as HTMLInputElement;
@@ -120,11 +95,23 @@ export class NotesWidget extends Widget
 		this.titleInput.addEventListener('input', () => this.saveCurrentState());
 		this.moodSelect.addEventListener('change', () => this.saveCurrentState());
 		this.tagsInput.addEventListener('input', () => this.saveCurrentState());
+
+		this._sidebarWidget = new NotesSidebar(undefined, {
+			itemsChanged: this.itemsChanged
+		});
 	}
+
+
+	protected onAfterAttach(msg: Message): void
+	{
+		super.onAfterAttach(msg);
+		this.loadDefaultLogs();
+	}
+
 
 	private loadDefaultLogs(): void
 	{
-		this.entries = [
+		this.items = [
 			{
 				id: 'log-1',
 				title: 'Initial Neural Dump',
@@ -136,9 +123,9 @@ export class NotesWidget extends Widget
 			}
 		];
 
-		this.selectedEntryId = this.entries[0].id;
-		this.renderLogList();
-		this.loadSelectedEntry();
+		this._selectedItemId = this.items[0].id;
+		this._itemsChanged.emit(this.items);
+		this.filterAndRender();
 	}
 
 	// --- DropFiles implementation for .md / .txt / .json logs ---
@@ -159,48 +146,20 @@ export class NotesWidget extends Widget
 				wordCount: content.trim().split(/\s+/).length
 			};
 
-			this.entries.unshift(newEntry);
+			this.items?.unshift(newEntry);
 		}
 
-		this.renderLogList();
+		this._itemsChanged.emit(this.items ?? []);
 		if(files.length > 0)
 		{
-			this.selectedEntryId = this.entries[0].id;
-			this.loadSelectedEntry();
+			this._selectedItemId = this.items?.[0].id;
+			this.filterAndRender();
 		}
 	}
 
-	private renderLogList(): void
+	protected filterAndRender(): void
 	{
-		this.entryListEl.innerHTML = '';
-		this.entries.forEach(e =>
-		{
-			const isSelected = e.id === this.selectedEntryId;
-			const item = document.createElement('div');
-			item.className = `tj-log-item ${isSelected ? 'selected' : ''}`;
-			item.innerHTML = `
-                <div class="tj-item-top">
-                    <span class="tj-item-title">${this.escapeHTML(e.title)}</span>
-                    <span class="tj-mood-indicator ${e.mood.toLowerCase()}">●</span>
-                </div>
-                <div class="tj-item-meta">
-                    <span>${e.timestamp}</span>
-                    <span>${e.wordCount} words</span>
-                </div>
-            `;
-			item.addEventListener('click', () =>
-			{
-				this.selectedEntryId = e.id;
-				this.renderLogList();
-				this.loadSelectedEntry();
-			});
-			this.entryListEl.appendChild(item);
-		});
-	}
-
-	private loadSelectedEntry(): void
-	{
-		const entry = this.entries.find(e => e.id === this.selectedEntryId);
+		const entry = this.items?.find(e => e.id === this._selectedItemId);
 		if(!entry) return;
 
 		this.titleInput.value = entry.title;
@@ -222,10 +181,11 @@ export class NotesWidget extends Widget
 			content: '',
 			wordCount: 0
 		};
-		this.entries.unshift(newEntry);
-		this.selectedEntryId = newEntry.id;
-		this.renderLogList();
-		this.loadSelectedEntry();
+		this.items?.unshift(newEntry);
+		this._selectedItemId = newEntry.id;
+		this._selectedItem = newEntry;
+		this._itemsChanged.emit([newEntry]);
+		this.filterAndRender();
 	}
 
 	private handleEditorInput(): void
@@ -237,7 +197,7 @@ export class NotesWidget extends Widget
 
 	private saveCurrentState(): void
 	{
-		const entry = this.entries.find(e => e.id === this.selectedEntryId);
+		const entry = this.items?.find(e => e.id === this._selectedItemId);
 		if(!entry) return;
 
 		entry.title = this.titleInput.value || 'Untitled Log';
@@ -248,10 +208,10 @@ export class NotesWidget extends Widget
 		entry.timestamp = new Date().toLocaleString();
 
 		this.timeStampEl.textContent = entry.timestamp;
-
-		// Update item in list sidebar without losing scroll
-		const listTitleEl = this.entryListEl.querySelector(`.tj-log-item.selected .tj-item-title`);
-		if(listTitleEl) listTitleEl.textContent = entry.title;
+		this._itemsChanged.emit([entry]);
+		// TODO: Update item in list sidebar without losing scroll
+		//const listTitleEl = this.entryListEl.querySelector(`.tj-log-item.selected .tj-item-title`);
+		//if(listTitleEl) listTitleEl.textContent = entry.title;
 	}
 
 	private updateTelemetry(): void
@@ -300,7 +260,7 @@ export class NotesWidget extends Widget
 
 	private exportAllLogs(): void
 	{
-		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.entries, null, 2));
+		const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.items, null, 2));
 		const a = document.createElement('a');
 		a.href = dataStr;
 		a.download = `nexus_journal_backup_${Date.now()}.json`;
@@ -309,10 +269,4 @@ export class NotesWidget extends Widget
 		a.remove();
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

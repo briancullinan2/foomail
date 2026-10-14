@@ -6,6 +6,7 @@ import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow }
 import { CalendarSidebar, ICalendarSource } from './widget-sidebar';
 import { ISignal, Signal } from '@lumino/signaling';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 
 export interface ITimelineItem
@@ -18,10 +19,11 @@ export interface ITimelineItem
 }
 
 
-const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & RepositorySettingsWindow & LuminoLayoutWindow = self as unknown as any;
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & RepositorySettingsWindow
+	& LuminoLayoutWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
-export class CalendarWidget extends Widget
+export class CalendarWidget extends widgetSelf.WithChangingWidget<CalendarWidget, ICalendarSource>
 {
 	private _calendarGridContainer: HTMLDivElement;
 	private _currentYear: number;
@@ -36,36 +38,9 @@ export class CalendarWidget extends Widget
 	private _yearSelect!: HTMLSelectElement;
 	private _monthSelect!: HTMLSelectElement;
 	private _legendContainer!: HTMLDivElement;
-	private _calendarSidebar: CalendarSidebar;
 
-	private _calendarsChanged: Signal<CalendarWidget, ICalendarSource[]> = new Signal(this);
-	private selectedCalendarId?: string;
-	private isEditing: boolean = false;
-	private calendars: ICalendarSource[] = [];
 	private filteredCalendars: ICalendarSource[] = [];
 
-	private subSelected: (_: Widget, items: ICalendarSource[]) => any = (_, items) =>
-	{
-		this.filteredCalendars = items;
-		this._renderCalendarGrid();
-	};
-
-	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
-	{
-		this.isEditing = edit;
-		this._renderCalendarGrid();
-	};
-
-	private subChanged: (_: Widget, items: ICalendarSource[]) => any = (_, items) =>
-	{
-		this.calendars = items;
-		this._renderCalendarGrid();
-	};
-
-	public get calendarsChanged(): ISignal<CalendarWidget, ICalendarSource[]>
-	{
-		return this._calendarsChanged;
-	}
 
 	constructor()
 	{
@@ -84,78 +59,12 @@ export class CalendarWidget extends Widget
 		this._calendarGridContainer = document.createElement('div');
 		this._calendarGridContainer.className = 'calendar-viewport-container';
 		this.node.appendChild(this._calendarGridContainer);
-		this._calendarSidebar = new CalendarSidebar(undefined, {
-			itemsChanged: this.calendarsChanged
+		this._sidebarWidget = new CalendarSidebar(undefined, {
+			itemsChanged: this.itemsChanged
 		});
 
 	}
 
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-		this.resubscribeSidebar();
-	}
-
-	private resubscribeSidebar()
-	{
-		this._calendarSidebar?.selectedCalendars.disconnect(this.subSelected);
-		// this._calendarSidebar?.editEmail.disconnect(this.subEditing);
-		this._calendarSidebar?.calendarsChanged.disconnect(this.subChanged);
-		this._calendarSidebar?.selectedCalendars.connect(this.subSelected);
-		// this._calendarSidebar?.editEmail.connect(this.subEditing);
-		this._calendarSidebar?.calendarsChanged.connect(this.subChanged);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._calendarSidebar?.selectedCalendars.disconnect(this.subSelected);
-		// this._calendarSidebar?.editEmail.disconnect(this.subEditing);
-		this._calendarSidebar?.calendarsChanged.disconnect(this.subChanged);
-		this._calendarSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._calendarSidebar?.selectedCalendars.disconnect(this.subSelected);
-		// this._calendarSidebar?.editEmail.disconnect(this.subEditing);
-		this._calendarSidebar?.calendarsChanged.disconnect(this.subChanged);
-		this._calendarSidebar?.close();
-		super.onBeforeDetach(msg);
-	}
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._calendarSidebar)
-			{
-				if(!this._calendarSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._calendarSidebar, {
-						type: 'outline',
-						projectId: that._calendarSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
-
-
-	protected onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		this._renderCalendarGrid();
-		if(this._calendarSidebar && !this._calendarSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
-		this.resubscribeSidebar();
-	}
 
 	protected onResize(msg: Widget.ResizeMessage): void
 	{
@@ -165,7 +74,7 @@ export class CalendarWidget extends Widget
 	/**
 	 * Builds and populates the 7xN CSS Grid month view
 	 */
-	private async _renderCalendarGrid(): Promise<void>
+	protected async filterAndRender(): Promise<void>
 	{
 		this._calendarGridContainer.innerHTML = '';
 
@@ -483,16 +392,6 @@ export class CalendarWidget extends Widget
 		return container;
 	}
 
-	private _escapeHtml(val: any): string
-	{
-		if(val === null || val === undefined) return '';
-		const str = typeof val === 'string' ? val : String(val);
-		return str
-			.replace(/&/g, '&')
-			.replace(/>/g, '>')
-			.replace(/"/g, '"');
-	}
-
 	private _buildHeaderToolbar(): HTMLDivElement
 	{
 		const toolbar = document.createElement('div');
@@ -530,7 +429,7 @@ export class CalendarWidget extends Widget
 		{
 			this._currentYear = parseInt(this._yearSelect.value, 10);
 			this._currentMonth = parseInt(this._monthSelect.value, 10);
-			this._renderCalendarGrid();
+			this.filterAndRender();
 		});
 
 		navGroup.appendChild(this._yearSelect);
@@ -557,7 +456,7 @@ export class CalendarWidget extends Widget
 			{
 				if(chk.checked) this._activeCategories.add(cat);
 				else this._activeCategories.delete(cat);
-				this._renderCalendarGrid();
+				this.filterAndRender();
 			});
 
 			item.appendChild(chk);

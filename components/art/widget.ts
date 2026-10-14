@@ -416,19 +416,6 @@ export class ArtWidget extends widgetSelf.AutoSidebarWidget<Widget>
 		return undefined;
 	}
 
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._sidebarWidget?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._sidebarWidget?.close();
-		super.onBeforeDetach(msg);
-	}
-
 
 	/**
 	 * Opens target widget or fallback widgets sequentially as outline panels
@@ -650,26 +637,11 @@ export class ArtWidget extends widgetSelf.AutoSidebarWidget<Widget>
 		}
 	}
 
-	protected override onActivateRequest(msg: Message): void
-	{
-		super.onActivateRequest(msg);
-		//this.openOutlineWidget(this.widgetIndex);
-	}
 
 	protected override onAfterShow(msg: Message): void
 	{
 		super.onAfterShow(msg);
 		this.openOutlineWidget(this.widgetIndex);
-	}
-
-	public processMessage(msg: Message): void
-	{
-		if(msg.type === 'close-request')
-		{
-			this._sidebarWidget?.close();
-		}
-
-		super.processMessage(msg);
 	}
 
 }

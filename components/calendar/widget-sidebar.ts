@@ -21,33 +21,19 @@ export interface ICalendarSource
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
 	& WidgetExtensionsWindow = self as unknown as any;
 
-export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidget, ICalendarSource[]>
+export class CalendarSidebar extends widgetSelf.SidebarChangeWidget<CalendarWidget, ICalendarSource>
 {
 	private calendarListEl!: HTMLElement;
 	private miniCalendarEl!: HTMLElement;
-	private searchInput!: HTMLInputElement;
 
 	private currentDisplayDate: Date = new Date();
 
 	private _selectedDate: Signal<CalendarSidebar, Date> = new Signal(this);
 	public get selectedDate(): ISignal<CalendarSidebar, Date> { return this._selectedDate; }
 
-	private _calendarsChanged: Signal<CalendarSidebar, ICalendarSource[]> = new Signal(this);
-	public get calendarsChanged(): ISignal<CalendarSidebar, ICalendarSource[]> { return this._calendarsChanged; }
-
-	private _selectedCalendars: Signal<CalendarSidebar, ICalendarSource[]> = new Signal(this);
-
-	public get selectedCalendars(): ISignal<CalendarSidebar, ICalendarSource[]>
-	{
-		return this._selectedCalendars;
-	}
-
 	constructor(title?: string, options?: IMainpanelOptions<CalendarWidget, ICalendarSource[]>)
 	{
-		super(CalendarSidebar.name, options);
-		this.title.label = title ?? 'Calendars';
-		this.title.iconClass = 'bx bx-card-view-tiles';
-		this.title.closable = true;
+		super(CalendarSidebar.name, title ?? 'Calendars', options);
 		this.initDom();
 	}
 
@@ -155,7 +141,8 @@ export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidg
 				events: []
 			}
 		];
-		this._calendarsChanged.emit(this.items);
+		this._itemsChanged.emit(this.items);
+		this.filterAndRender();
 	}
 
 	private renderMiniCalendar(): void
@@ -232,7 +219,7 @@ export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidg
                 <label class="cal-checkbox-wrapper" style="--cal-color: ${cal.color}">
                     <input type="checkbox" ${cal.enabled ? 'checked' : ''} data-cal-id="${cal.id}" />
                     <span class="cal-checkmark"></span>
-                    <span class="cal-name" title="${cal.name}">${this.escapeHTML(cal.name)}</span>
+                    <span class="cal-name" title="${cal.name}">${this.escapeHtml(cal.name)}</span>
                     ${cal.isRemote ? '<i class="bx bx-globe cal-remote-icon" title="Subscribable Remote Calendar"></i>' : ''}
                 </label>
             `;
@@ -242,7 +229,7 @@ export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidg
 			{
 				cal.enabled = checkbox.checked;
 				item.classList.toggle('active', cal.enabled);
-				this._calendarsChanged.emit(this.items ?? []);
+				this._itemsChanged.emit(this.items ?? []);
 			});
 
 			this.calendarListEl.appendChild(item);
@@ -305,7 +292,7 @@ export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidg
 	{
 		this.items?.push(source);
 		this.filterAndRender();
-		this._calendarsChanged.emit([source]);
+		this._itemsChanged.emit([source]);
 	}
 
 	private getRandomColor(): string
@@ -314,10 +301,4 @@ export class CalendarSidebar extends widgetSelf.SidebarUpdateWidget<CalendarWidg
 		return colors[Math.floor(Math.random() * colors.length)];
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

@@ -51,6 +51,7 @@
 	padding: 0.65rem 1rem;
 	background: #090d1a;
 	border-bottom: 1px solid #00ff66;
+	gap: 0.5rem;
 }
 
 .tj-sys-info {
@@ -64,11 +65,6 @@
 	color: #00ff66;
 	text-shadow: 0 0 8px #00ff66;
 	font-size: 0.75rem;
-}
-
-.tj-header-actions {
-	display: flex;
-	gap: 0.5rem;
 }
 
 .tj-btn {

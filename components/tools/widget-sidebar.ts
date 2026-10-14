@@ -26,10 +26,8 @@ export class ToolsSidebar extends widgetSelf.SingletonSidebarWidget
 
 	constructor(title?: string, options?: Widget.IOptions)
 	{
-		super(options, ToolsSidebar.name);
+		super(ToolsSidebar.name, title ?? 'Tools', options);
 
-		this.title.label = title ?? 'Tools';
-		this.title.closable = true;
 		this.addClass('tools-sidebar');
 
 		this._registry = (options as any)?.registry ?? widgetSelf.TOOLS_REGISTRY;

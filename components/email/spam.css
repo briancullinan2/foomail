@@ -9,6 +9,7 @@
 	color: var(--jp-ui-font-color1, #cccccc);
 	font-family: var(--jp-ui-font-family, sans-serif);
 	box-sizing: border-box;
+	padding: 1rem;
 }
 
 .sf-layout-container {
@@ -51,14 +52,15 @@
 	background: transparent;
 	border: none;
 	color: var(--jp-ui-font-color1, #cccccc);
-	width: 32px;
-	height: 32px;
-	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	transition: background-color 0.2s;
+}
+
+.sf-btn-icon i {
+	margin-right: 10px;
 }
 
 .sf-btn-icon:hover {

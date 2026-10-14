@@ -3,6 +3,7 @@ import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 export interface IEmailTemplate
 {
@@ -15,9 +16,9 @@ export interface IEmailTemplate
 }
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class TemplateLibraryWidget extends Widget
+export class TemplateLibraryWidget extends widgetSelf.GenericSearchableWidget
 {
 	private templates: IEmailTemplate[] = [];
 	private selectedCategory: string = 'all';
@@ -25,7 +26,6 @@ export class TemplateLibraryWidget extends Widget
 
 	private templatesGridEl!: HTMLElement;
 	private livePreviewFrameEl!: HTMLIFrameElement;
-	private searchInput!: HTMLInputElement;
 
 	private _templateSelected: Signal<TemplateLibraryWidget, IEmailTemplate> = new Signal(this);
 	public get templateSelected(): ISignal<TemplateLibraryWidget, IEmailTemplate> { return this._templateSelected; }
@@ -179,13 +179,13 @@ export class TemplateLibraryWidget extends Widget
 
 	private renderTemplates(): void
 	{
-		const query = this.searchInput.value.toLowerCase();
-		const filtered = this.templates.filter(t =>
+		const query = this.searchInput?.value.toLowerCase();
+		const filtered = query ? this.templates.filter(t =>
 		{
 			const matchesCat = this.selectedCategory === 'all' || t.category === this.selectedCategory;
 			const matchesQuery = t.title.toLowerCase().includes(query) || t.description.toLowerCase().includes(query);
 			return matchesCat && matchesQuery;
-		});
+		}) : this.templates;
 
 		this.templatesGridEl.innerHTML = '';
 		if(filtered.length === 0)
@@ -241,10 +241,4 @@ export class TemplateLibraryWidget extends Widget
 		}
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

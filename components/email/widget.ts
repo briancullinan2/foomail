@@ -1,12 +1,11 @@
-import { Message } from '@lumino/messaging';
-import { Widget } from '@lumino/widgets';
 import { EmailsSidebar } from './widget-sidebar';
-import { ISignal, Signal } from '@lumino/signaling';
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from '../bundle/menu.d';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
+import type { IMainpanelOptions, WidgetExtensionsWindow } from '../bundle/widget-extensions';
+import { Widget } from '@lumino/widgets';
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
 export interface EmailMessage
 {
@@ -25,112 +24,18 @@ export interface EmailMessage
 	isStarred: boolean;
 }
 
-export class EmailWidget extends Widget
+export class EmailWidget extends widgetSelf.WithChangingWidget<EmailWidget, EmailMessage>
 {
-	private messages: EmailMessage[] = [];
 	private filteredMessages: EmailMessage[] = [];
-	private selectedMessageId: string | null = null;
 	private currentFolder: string = 'inbox';
 	private currentAiFilter: string = 'all';
-	private _emailsSidebar?: EmailsSidebar;
-	private _emailsChanged: Signal<EmailWidget, EmailMessage[]> = new Signal(this);
-	private isEditing: boolean = false;
 
-	private subSelected: (_: Widget, id: string) => any = (_, id) =>
-	{
-		this.selectedMessageId = id;
-		this.renderReaderPane();
-	};
-	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
-	{
-		this.isEditing = edit;
-		this.renderReaderPane();
-	};
-	private subChanged: (_: Widget, items: EmailMessage[]) => any = (_, items) =>
-	{
-		this.messages = items;
-		this.renderReaderPane();
-	};
 
-	public get emailsChanged(): ISignal<EmailWidget, EmailMessage[]>
+	constructor(title?: string, options?: IMainpanelOptions<EmailWidget, EmailMessage[]>)
 	{
-		return this._emailsChanged;
-	}
-
-	constructor(title?: string)
-	{
-		super();
-		this.title.label = title ?? 'Email Manager';
-		this.title.iconClass = 'bx bx-envelope';
-		this.title.closable = true;
+		super(title, options);
 		this.addClass('lumino-email-manager');
 		this.initDOM();
-	}
-
-
-	protected override onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		if(this._emailsSidebar && !this._emailsSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
-		this.resubscribeSidebar();
-	}
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-		this.resubscribeSidebar();
-	}
-
-	private resubscribeSidebar()
-	{
-		this._emailsSidebar?.selectedEmail.disconnect(this.subSelected);
-		// this._emailsSidebar?.editEmail.disconnect(this.subEditing);
-		this._emailsSidebar?.emailsChanged.disconnect(this.subChanged);
-		this._emailsSidebar?.selectedEmail.connect(this.subSelected);
-		// this._emailsSidebar?.editEmail.connect(this.subEditing);
-		this._emailsSidebar?.emailsChanged.connect(this.subChanged);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._emailsSidebar?.selectedEmail.disconnect(this.subSelected);
-		// this._emailsSidebar?.editEmail.disconnect(this.subEditing);
-		this._emailsSidebar?.emailsChanged.disconnect(this.subChanged);
-		this._emailsSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._emailsSidebar?.selectedEmail.disconnect(this.subSelected);
-		// this._emailsSidebar?.editEmail.disconnect(this.subEditing);
-		this._emailsSidebar?.emailsChanged.disconnect(this.subChanged);
-		this._emailsSidebar?.close();
-		super.onBeforeDetach(msg);
-	}
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._emailsSidebar)
-			{
-				if(!this._emailsSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._emailsSidebar, {
-						type: 'outline',
-						projectId: that._emailsSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
 	}
 
 
@@ -144,8 +49,8 @@ export class EmailWidget extends Widget
 	{
 		this.id = 'emReaderPane';
 		this.node.innerHTML = EmailWidget.EMPTY_MESSAGE;
-		this._emailsSidebar = new EmailsSidebar(undefined, {
-			emailsChanged: this.emailsChanged
+		this._sidebarWidget = new EmailsSidebar(undefined, {
+			itemsChanged: this.itemsChanged
 		});
 		this.resubscribeSidebar();
 
@@ -178,13 +83,13 @@ export class EmailWidget extends Widget
 
 			newMessages.push(newMsg);
 		}
-		this.messages.unshift(...newMessages);
-		this._emailsChanged.emit(newMessages);
+		this.items?.unshift(...newMessages);
+		this._itemsChanged.emit(newMessages);
 	}
 
-	private renderReaderPane(): void
+	protected filterAndRender(): void
 	{
-		const msg = this.messages.find(m => m.id === this.selectedMessageId);
+		const msg = this.items?.find(m => m.id === this._selectedItemId);
 		if(!msg)
 		{
 			this.node.innerHTML = EmailWidget.EMPTY_MESSAGE;
@@ -227,30 +132,24 @@ export class EmailWidget extends Widget
 		this.node.querySelector('#emStarBtn')?.addEventListener('click', () =>
 		{
 			msg.isStarred = !msg.isStarred;
-			this.renderReaderPane();
+			this.filterAndRender();
 		});
 
 		this.node.querySelector('#emArchiveBtn')?.addEventListener('click', () =>
 		{
 			msg.folder = 'archive';
-			this.selectedMessageId = null;
-			this._emailsChanged.emit([msg]);
+			this._selectedItemId = undefined;
+			this._itemsChanged.emit([msg]);
 			this.node.innerHTML = `<div class="em-empty-state"><i class="bx bx-paper-plane"></i><p>Transmission archived.</p></div>`;
 		});
 
 		this.node.querySelector('#emDeleteBtn')?.addEventListener('click', () =>
 		{
 			msg.folder = 'trash';
-			this.selectedMessageId = null;
-			this._emailsChanged.emit([msg]);
+			this._selectedItemId = undefined;
+			this._itemsChanged.emit([msg]);
 			this.node.innerHTML = `<div class="em-empty-state"><i class="bx bx-paper-plane"></i><p>Transmission moved to trash.</p></div>`;
 		});
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

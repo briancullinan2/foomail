@@ -1,10 +1,10 @@
 import { BoxPanel, DockPanel, FocusTracker, MenuBar, Panel, Widget } from "@lumino/widgets";
 import { LayoutAdjuster, MOBILEMODE, WIDESCREEN, TALLSCREEN, WidgetType } from "./lumino-widget";
 import type { LuminoLayoutWindow } from "./lumino.d";
-import type { GlobalToolbarsWindow } from "./menu.d";
+import type { GlobalToolbarsWindow, RepositorySettingsWindow } from "./menu.d";
 
 
-const luminoSelf: LuminoLayoutWindow & GlobalToolbarsWindow = self as unknown as any;
+const luminoSelf: LuminoLayoutWindow & GlobalToolbarsWindow & RepositorySettingsWindow = self as unknown as any;
 
 
 export interface LuminoLayoutNode
@@ -50,6 +50,8 @@ export const OUTLINE_WIDGET_TYPES = [
 	'CalendarSidebar', 'ContactsSidebar',
 	'BookmarksListWidget',
 ];
+
+luminoSelf.OUTLINE_WIDGET_TYPES = OUTLINE_WIDGET_TYPES;
 
 
 /**

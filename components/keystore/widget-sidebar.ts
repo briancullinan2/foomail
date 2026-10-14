@@ -11,33 +11,15 @@ const widgetSelf: LuminoLayoutWindow & WidgetExtensionsWindow
 	= self as unknown as any;
 
 
-export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWidget, CredentialRecord[]>
+export class PasswordsSidebar extends widgetSelf.SidebarChangeWidget<KeystoreWidget, CredentialRecord>
 {
-	private searchInput!: HTMLInputElement;
 	private typeFilterSelect!: HTMLSelectElement;
 	private credentialListEl!: HTMLElement;
 	private filteredCredentials: CredentialRecord[] = [];
-	private selectedCredentialId: string | null = null;
-
-	private _selectedPassword: Signal<PasswordsSidebar, CredentialRecord> = new Signal(this);
-
-	public get selectedPassword(): ISignal<PasswordsSidebar, CredentialRecord>
-	{
-		return this._selectedPassword;
-	}
-
-	private _passwordsChanged: Signal<PasswordsSidebar, CredentialRecord[]> = new Signal(this);
-	public get passwordsChanged(): ISignal<PasswordsSidebar, CredentialRecord[]> { return this._passwordsChanged; }
-
-	private _createPassword: Signal<PasswordsSidebar, CredentialType> = new Signal(this);
-	public get createPassword(): ISignal<PasswordsSidebar, CredentialType> { return this._createPassword; }
 
 	constructor(title?: string, options?: IMainpanelOptions<KeystoreWidget, CredentialRecord[]>)
 	{
-		super(PasswordsSidebar.name, options);
-		this.title.label = title ?? 'Passwords';
-		this.title.iconClass = 'bx bx-card-view-tiles';
-		this.title.closable = true;
+		super(PasswordsSidebar.name, title ?? 'Passwords', options);
 		this.initDOM();
 	}
 
@@ -90,7 +72,7 @@ export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWid
 
 
 		const addBtn = this.node.querySelector('#pwmAddBtn');
-		addBtn?.addEventListener('click', () => this._createPassword.emit(this.typeFilterSelect.value as CredentialType));
+		addBtn?.addEventListener('click', () => this._createItem.emit(this.typeFilterSelect.value as CredentialType));
 
 		const exportBtn = this.node.querySelector('#pwmExportBtn');
 		exportBtn?.addEventListener('click', () => KeyParser.exportAllCredentials(this.items ?? []));
@@ -126,17 +108,17 @@ export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWid
 	// --- Filtering & Rendering ---
 	protected filterAndRender(): void
 	{
-		const query = this.searchInput.value.toLowerCase();
+		const query = this.searchInput?.value.toLowerCase();
 		const typeFilter = this.typeFilterSelect.value;
 
-		this.filteredCredentials = this.items?.filter(item =>
+		this.filteredCredentials = query ? this.items?.filter(item =>
 		{
 			const matchesType = typeFilter === 'all' || item.type === typeFilter;
 			const matchesQuery = item.title.toLowerCase().includes(query) ||
 				item.domain.toLowerCase().includes(query) ||
 				item.fields.some(f => f.name.toLowerCase().includes(query) || f.value.toLowerCase().includes(query));
 			return matchesType && matchesQuery;
-		}) ?? [];
+		}) ?? [] : this.items ?? [];
 
 		this.renderListUI();
 	}
@@ -152,7 +134,7 @@ export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWid
 
 		this.filteredCredentials.forEach(item =>
 		{
-			const isSelected = item.id === this.selectedCredentialId;
+			const isSelected = item.id === this._selectedItemId;
 			const card = document.createElement('div');
 			card.className = `pwm-card ${isSelected ? 'selected' : ''}`;
 			card.innerHTML = `
@@ -167,19 +149,12 @@ export class PasswordsSidebar extends widgetSelf.SidebarUpdateWidget<KeystoreWid
 			`;
 			card.addEventListener('click', () =>
 			{
-				this.selectedCredentialId = item.id;
+				this._selectedItemId = item.id;
 				this.renderListUI();
-				this._selectedPassword.emit(item);
+				this._selectedItem.emit(item);
 			});
 			this.credentialListEl.appendChild(card);
 		});
-	}
-
-	private escapeHTML(str: string): string
-	{
-		return str.replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
 	}
 
 	private getTypeIcon(type: string): string

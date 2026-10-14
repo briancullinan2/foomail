@@ -10,45 +10,18 @@ import type { IMainpanelOptions, WidgetExtensionsWindow } from "../bundle/widget
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
 	& WidgetExtensionsWindow = self as unknown as any;
 
-export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, EmailMessage[]>
+export class EmailsSidebar extends widgetSelf.SidebarChangeWidget<EmailWidget, EmailMessage>
 {
 	private folderListEl!: HTMLElement;
 	private messageListEl!: HTMLElement;
-	private searchInput!: HTMLInputElement;
 	private filteredMessages: EmailMessage[] = [];
-	private selectedMessageId: string | null = null;
 	private currentFolder: string = 'inbox';
 	private currentAiFilter: string = 'all';
 
-	private _selectedEmail: Signal<EmailsSidebar, string> = new Signal(this);
-
-	public get selectedEmail(): ISignal<EmailsSidebar, string>
-	{
-		return this._selectedEmail;
-	}
-
-	// private _editEmail: Signal<EmailsSidebar, boolean> = new Signal(this);
-
-	// public get editEmail(): ISignal<EmailsSidebar, boolean>
-	// {
-	// 	return this._editEmail;
-	// }
-
-	private _emailsChanged: Signal<EmailsSidebar, EmailMessage[]> = new Signal(this);
-
-	public get emailsChanged(): ISignal<EmailsSidebar, EmailMessage[]>
-	{
-		return this._emailsChanged;
-	}
-
 	constructor(title?: string, options?: IMainpanelOptions<EmailWidget, EmailMessage[]>)
 	{
-		super(EmailsSidebar.name, options);
-		this.title.label = title ?? 'Messages';
-		this.title.iconClass = 'bx bx-card-view-tiles';
-		this.title.closable = true;
+		super(EmailsSidebar.name, title ?? 'Messages', options);
 		this.initDom();
-		// this.loadStellarDemoData();
 	}
 
 
@@ -117,8 +90,13 @@ export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, E
 	{
 		this.updateBadgeCounts();
 
-		const query = this.searchInput.value.toLowerCase();
-
+		const query = this.searchInput?.value.toLowerCase();
+		if(!query)
+		{
+			this.filteredMessages = this.items ?? [];
+			this._renderMessageList();
+			return;
+		}
 		this.filteredMessages = this.items?.filter(m =>
 		{
 			const matchesFolder = m.folder === this.currentFolder;
@@ -153,7 +131,7 @@ export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, E
 
 		this.filteredMessages.forEach(m =>
 		{
-			const isSelected = m.id === this.selectedMessageId;
+			const isSelected = m.id === this._selectedItemId;
 			const card = document.createElement('div');
 			card.className = `em-message-card ${m.isRead ? '' : 'unread'} ${isSelected ? 'selected' : ''}`;
 			card.innerHTML = `
@@ -173,9 +151,9 @@ export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, E
 			card.addEventListener('click', () =>
 			{
 				m.isRead = true;
-				this.selectedMessageId = m.id;
+				this._selectedItemId = m.id;
 				this.filterAndRender();
-				this._selectedEmail.emit(m.id);
+				this._selectedItem.emit(m);
 			});
 			this.messageListEl.appendChild(card);
 		});
@@ -246,18 +224,11 @@ export class EmailsSidebar extends widgetSelf.SidebarUpdateWidget<EmailWidget, E
 			}
 		];
 
-		this._emailsChanged.emit(this.items);
+		this._itemsChanged.emit(this.items);
 		this.updateBadgeCounts();
 		this.filterAndRender();
 	}
 
-
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }
 
 

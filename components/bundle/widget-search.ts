@@ -1,34 +1,45 @@
-import { Widget } from "@lumino/widgets";
+import { Title, Widget } from "@lumino/widgets";
 import type { GlobalToolbarsWindow } from "../bundle/menu.d";
+import { Message } from "@lumino/messaging";
+import type { LuminoLayoutWindow } from "./lumino.d";
 
 export interface ISearchable
 {
+	id?: string;
 	node: HTMLElement;
+	title: Title<Widget>;
 	searchContainer?: HTMLDivElement;
 	searchInput?: HTMLInputElement;
 	searchObserver?: ResizeObserver;
 	parentTabBar?: HTMLElement;
-	id?: string;
 	executeFindQuery?(pooledCtx: any, event?: KeyboardEvent | null): void;
 }
 
-export interface ITabButton
+export interface ITabButton extends ISearchable
 {
-	id?: string;
-	node: HTMLElement;
 	parent?: Widget | null;
 	_toggleBtn?: HTMLElement | HTMLDivElement;
 }
 
 
-const searchSelf: GlobalToolbarsWindow = self as unknown as any;
+const searchSelf: GlobalToolbarsWindow & LuminoLayoutWindow = self as unknown as any;
 
 
 // TODO: replace terminal search attachment with this widget
-export class WidgetSearchBar
+export class WidgetWithSearchBar extends Widget implements ISearchable
 {
 	static readonly resizeListeners: EventListener[] = [];
 	static readonly seenContexts: ISearchable[] = [];
+	public searchContainer?: HTMLDivElement;
+	public searchInput?: HTMLInputElement;
+	public searchObserver?: ResizeObserver;
+	public parentTabBar?: HTMLElement;
+	public executeFindQuery?(pooledCtx: any, event?: KeyboardEvent | null): void;
+
+	protected get defaultId(): string
+	{
+		return this.id ?? ('lm-Widget-' + this.constructor.name + '-' + searchSelf.nextTemp?.());
+	}
 
 	private static createSearchElement(context: ISearchable): void
 	{
@@ -68,27 +79,47 @@ export class WidgetSearchBar
 			//{
 			//const { width, height } = entry.contentRect;
 			//}
-			WidgetSearchBar.resizeSearchContainer(context);
+			WidgetWithSearchBar.resizeSearchContainer(context);
 		});
 		context.searchObserver.observe(context.node);
+	}
+
+
+	protected static getTabBar(context: ISearchable): HTMLElement | undefined
+	{
+		//context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.id})`) as HTMLElement;
+		const bars = searchSelf.mainDock?.tabBars() ?? [];
+		for(const bar of bars)
+		{
+			const i = bar.titles.indexOf(context.title);
+			if(i > -1)
+			{
+				return (context.id && context.id.length > 0
+					? bar.node.querySelector(`li.lm-TabBar-tab.${context.id}`) as HTMLElement
+					: undefined)
+					?? bar.node.querySelector(`li.lm-TabBar-tab:nth-of-type(${i + 1})`) as HTMLElement;
+			}
+		}
 	}
 
 
 	/**
 	 * Triggered by Lumino lifecycle manager when the tab layout brings this item into view.
 	 */
-	public static onAfterShow(that: ISearchable): void
+	protected override onAfterShow(msg: Message): void
 	{
-		WidgetSearchBar.createSearchElement(that);
+		super.onAfterShow(msg);
+		WidgetWithSearchBar.createSearchElement(this);
 		window.requestAnimationFrame(() =>
 		{
-			WidgetSearchBar.showSearchBar(that);
+			this.showSearchBar(this);
 		});
 	}
 
 	private static resizeSearchContainer = (context: ISearchable) =>
 	{
-		const parentTabBar = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.id})`) as HTMLElement;
+
+		const parentTabBar = this.getTabBar(context);
 
 		if(!parentTabBar || !context
 			|| !context.searchContainer
@@ -96,13 +127,6 @@ export class WidgetSearchBar
 		{
 			return;
 		}
-
-
-		if(typeof context === 'object')
-		{
-			context.parentTabBar = parentTabBar;
-		}
-
 
 		if('parentTabBar' in context)
 		{
@@ -113,6 +137,11 @@ export class WidgetSearchBar
 		} else
 		{
 			parentTabBar?.appendChild(context.searchContainer);
+		}
+
+		if(typeof context === 'object')
+		{
+			context.parentTabBar = parentTabBar;
 		}
 
 		// Ensure searchContainer doesn't push the tab bar layout around
@@ -166,9 +195,9 @@ export class WidgetSearchBar
 		context.searchContainer.style.maxWidth = `${remainingSpace}px`;
 	};
 
-	private static showSearchBar(context: ISearchable)
+	private showSearchBar(context: ISearchable)
 	{
-		context.parentTabBar = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.id})`) as HTMLElement;
+		context.parentTabBar = WidgetWithSearchBar.getTabBar(context);
 
 		if(context.parentTabBar && context && context.searchContainer)
 		{
@@ -178,23 +207,23 @@ export class WidgetSearchBar
 			// Calculate initial width
 			window.requestAnimationFrame(() =>
 			{
-				WidgetSearchBar.resizeSearchContainer(context);
+				WidgetWithSearchBar.resizeSearchContainer(context);
 			});
 
 			// Listen for window resizing to keep the width updated
-			let contextId = WidgetSearchBar.seenContexts.indexOf(context);
+			let contextId = WidgetWithSearchBar.seenContexts.indexOf(context);
 			if(contextId > -1)
 			{
-				window.removeEventListener('resize', WidgetSearchBar.resizeListeners[contextId]);
-				WidgetSearchBar.seenContexts.splice(contextId, 1);
-				WidgetSearchBar.resizeListeners.splice(contextId, 1);
+				window.removeEventListener('resize', WidgetWithSearchBar.resizeListeners[contextId]);
+				WidgetWithSearchBar.seenContexts.splice(contextId, 1);
+				WidgetWithSearchBar.resizeListeners.splice(contextId, 1);
 			} else
 			{
-				contextId = WidgetSearchBar.resizeListeners.length;
+				contextId = WidgetWithSearchBar.resizeListeners.length;
 			}
-			WidgetSearchBar.seenContexts[contextId] = context;
-			WidgetSearchBar.resizeListeners[contextId] = WidgetSearchBar.resizeSearchContainer.bind(context, context);
-			window.addEventListener('resize', WidgetSearchBar.resizeListeners[contextId]);
+			WidgetWithSearchBar.seenContexts[contextId] = context;
+			WidgetWithSearchBar.resizeListeners[contextId] = WidgetWithSearchBar.resizeSearchContainer.bind(context, context);
+			window.addEventListener('resize', WidgetWithSearchBar.resizeListeners[contextId]);
 			context.searchObserver?.observe(context.node);
 		}
 	}
@@ -202,75 +231,81 @@ export class WidgetSearchBar
 	/**
 	 * Triggered by Lumino lifecycle manager when the tab loses active focus or is moved.
 	 */
-	public static onAfterHide(context: ISearchable): void
+	protected override onAfterHide(msg: Message): void
 	{
-		if(context && context.searchContainer)
+		super.onAfterAttach(msg);
+		if(this && this.searchContainer)
 		{
-			if(context.searchContainer.parentNode)
+			if(this.searchContainer.parentNode)
 			{
-				context.searchContainer.parentNode.removeChild(context.searchContainer);
+				this.searchContainer.parentNode.removeChild(this.searchContainer);
 			}
-			context.searchContainer.style.display = 'none';
-			let contextId = WidgetSearchBar.seenContexts.indexOf(context);
+			this.searchContainer.style.display = 'none';
+			let contextId = WidgetWithSearchBar.seenContexts.indexOf(this);
 			if(contextId > -1)
 			{
-				window.removeEventListener('resize', WidgetSearchBar.resizeListeners[contextId]);
-				WidgetSearchBar.seenContexts.splice(contextId, 1);
-				WidgetSearchBar.resizeListeners.splice(contextId, 1);
+				window.removeEventListener('resize', WidgetWithSearchBar.resizeListeners[contextId]);
+				WidgetWithSearchBar.seenContexts.splice(contextId, 1);
+				WidgetWithSearchBar.resizeListeners.splice(contextId, 1);
 			}
-			context.searchObserver?.unobserve(context.node);
+			this.searchObserver?.unobserve(this.node);
 		}
 	}
 
-	public static onAfterAttach(context: ISearchable): void
+	protected override onAfterAttach(msg: Message): void
 	{
-
-		WidgetSearchBar.createSearchElement(context);
+		super.onAfterAttach(msg);
+		if(!this.id || this.id.length === 0)
+		{
+			this.id = this.defaultId;
+		}
+		if(!this.title.className.includes(this.id))
+		{
+			this.title.className += ' ' + this.id;
+		}
+		WidgetWithSearchBar.createSearchElement(this);
 		window.requestAnimationFrame(() =>
 		{
-			WidgetSearchBar.showSearchBar(context);
+			this.showSearchBar(this);
 		});
 	}
 
-	public static onBeforeDetach(context: ISearchable): void
+	protected override onBeforeDetach(msg: Message): void
 	{
-		if(context && context.searchContainer
-			&& context.searchContainer.parentNode)
+		if(this && this.searchContainer
+			&& this.searchContainer.parentNode)
 		{
-			context.searchContainer.parentNode.removeChild(context.searchContainer);
+			this.searchContainer.parentNode.removeChild(this.searchContainer);
 		}
-		context?.searchObserver?.disconnect();
+		this?.searchObserver?.disconnect();
+
+		super.onBeforeDetach(msg);
 	}
 
 
-
-	public static attachToggleIcon(context: ITabButton, renderToggle?: (toggle: HTMLElement) => void, click?: (event: PointerEvent | Event) => void): void
+	protected static attachToggleIcon(context: ITabButton, renderToggle?: Function | ((toggle: HTMLElement) => void), click?: Function | ((event: PointerEvent | Event) => void)): void
 	{
 		// Locate the DOM node for the specific tab item
 		let tabNode: HTMLElement | undefined | null;
 		if(context.id)
 		{
-			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.id})`) as HTMLElement;
+			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`li.lm-TabBar-tab.${context.id}`) as HTMLElement;
 		}
 		if(!tabNode && context.node.parentElement?.id)
 		{
-			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.node.parentElement.id})`) as HTMLElement;
+			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`li.lm-TabBar-tab.${context.node.parentElement.id}`) as HTMLElement;
 		}
 		if(!tabNode && context.node.parentElement?.parentElement?.id)
 		{
-			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.node.parentElement.parentElement.id})`) as HTMLElement;
+			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`li.lm-TabBar-tab.${context.node.parentElement.parentElement.id}`) as HTMLElement;
 		}
 		if(!tabNode && context.parent?.id)
 		{
-			tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${context.parent.id})`) as HTMLElement;
+			tabNode = this.getTabBar(context.parent);
 		}
 		if(!tabNode)
 		{
-			const parentWidgetId = (context.parent?.node ?? context.node.parentElement?.closest('.lm-Widget'))?.id;
-			if(parentWidgetId)
-			{
-				tabNode = context.node.closest('.lm-DockPanel, .lm-TabPanel')?.querySelector(`.lm-TabBar:has(li.${parentWidgetId})`) as HTMLElement;
-			}
+			tabNode = this.getTabBar(context);
 		}
 
 		if(!tabNode) return;
@@ -282,14 +317,14 @@ export class WidgetSearchBar
 		// Create custom toggle button
 		context._toggleBtn = document.createElement('div');
 		context._toggleBtn.className = 'lm-TabBar-tabIcon custom-toggle-btn';
-		renderToggle?.apply(context, [context._toggleBtn]);
+		(renderToggle as any)?.apply(context, [context._toggleBtn]);
 		context._toggleBtn.addEventListener('click', (event) =>
 		{
 			event.stopPropagation(); // Stop event bubbling to tab selection
-			click?.apply(context, [event]);
+			(click as any)?.apply(context, [event]);
 			if(context._toggleBtn)
 			{
-				renderToggle?.apply(context, [context._toggleBtn]);
+				(renderToggle as any)?.apply(context, [context._toggleBtn]);
 			}
 		});
 
@@ -299,4 +334,4 @@ export class WidgetSearchBar
 
 }
 
-searchSelf.WidgetSearchBar = WidgetSearchBar;
+searchSelf.WidgetWithSearchBar = WidgetWithSearchBar;

@@ -45,17 +45,12 @@ export class FileListWidget extends filelistSelf.SingletonSidebarWidget implemen
 
 	constructor(titleStr?: string, source?: string)
 	{
-		super(undefined, FileListWidget.name);
+		super(FileListWidget.name, titleStr);
 		this.id = `filelist-panel-${filelistSelf.nextTemp?.()}`;
-		if(titleStr)
-		{
-			this.title.label = titleStr;
-		}
 		if(filelistSelf.fileListWidgets)
 		{
 			filelistSelf.fileListWidgets[filelistSelf.fileListWidgets.length] = this;
 		}
-		this.title.closable = true;
 		this.node.style.minWidth = '200px';
 		this.addClass('ide-file-tree-widget');
 		if(source)

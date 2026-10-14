@@ -23,12 +23,7 @@ export class BookmarksListWidget extends widgetSelf.SidebarUpdateWidget<Bookmark
 
 	constructor(title?: string, options?: IMainpanelOptions<BookmarksWidget, IBookmarkNode[]>)
 	{
-		super(BookmarksListWidget.name, options);
-		this.id = 'lumino-bookmark-list';
-		this.title.label = title ?? "Bookmarks";
-		this.title.iconClass = 'bx bx-bookmarks';
-		this.title.closable = true;
-		this.title.className = this.id;
+		super(BookmarksListWidget.name, title ?? "Bookmarks", options);
 		this.addClass('bm-manager-list');
 		this.filterAndRender();
 	}
@@ -219,9 +214,4 @@ export class BookmarksListWidget extends widgetSelf.SidebarUpdateWidget<Bookmark
 		return panel;
 	}
 
-
-	private escapeHtml(str: string): string
-	{
-		return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-	}
 }

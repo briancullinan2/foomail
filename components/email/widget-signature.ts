@@ -3,6 +3,7 @@ import { ISignal, Signal } from "@lumino/signaling";
 import { Message } from "@lumino/messaging";
 import type { GlobalToolbarsWindow, LuminoMenuWindow } from "../bundle/menu.d";
 import type { LuminoLayoutWindow } from "../bundle/lumino.d";
+import type { WidgetExtensionsWindow } from "../bundle/widget-extensions";
 
 export interface ISignatureProfile
 {
@@ -22,9 +23,9 @@ export interface ISignatureTemplate
 }
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	= self as unknown as any;
+	& WidgetExtensionsWindow = self as unknown as any;
 
-export class SignatureWidget extends Widget
+export class SignatureWidget extends widgetSelf.GenericSearchableWidget
 {
 	private signatures: ISignatureProfile[] = [];
 	private templates: ISignatureTemplate[] = [];
@@ -308,10 +309,4 @@ export class SignatureWidget extends Widget
 		this._signaturesChanged.emit(this.signatures);
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

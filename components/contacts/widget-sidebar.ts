@@ -12,44 +12,17 @@ const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
 	& RepositorySettingsWindow & WidgetExtensionsWindow = self as unknown as any;
 
 
-export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidget, VCardContact[]>
+export class ContactsSidebar extends widgetSelf.SidebarChangeWidget<ContactsWidget, VCardContact>
 {
-	private isEditing: boolean = false;
 	private groupListEl!: HTMLElement;
 	private contactListEl!: HTMLElement;
-	private searchInput!: HTMLInputElement;
 	private selectedGroup: string = 'All';
 	private filteredContacts: VCardContact[] = [];
-	private selectedContactUid: string | null = null;
-
-	private _selectedContact: Signal<ContactsSidebar, string> = new Signal(this);
-
-	public get selectedContact(): ISignal<ContactsSidebar, string>
-	{
-		return this._selectedContact;
-	}
-
-	private _editContact: Signal<ContactsSidebar, boolean> = new Signal(this);
-
-	public get editContact(): ISignal<ContactsSidebar, boolean>
-	{
-		return this._editContact;
-	}
-
-	private _contactsChanged: Signal<ContactsSidebar, VCardContact[]> = new Signal(this);
-
-	public get contactsChanged(): ISignal<ContactsSidebar, VCardContact[]>
-	{
-		return this._contactsChanged;
-	}
 
 	constructor(title?: string, options?: IMainpanelOptions<ContactsWidget, VCardContact[]>)
 	{
-		super(ContactsSidebar.name, options);
+		super(ContactsSidebar.name, title ?? 'Groups', options);
 
-		this.title.label = title ?? 'Groups';
-		this.title.iconClass = 'bx bx-card-view-tiles';
-		this.title.closable = true;
 		this.addClass('contacts-sidebar');
 
 		this._buildUI();
@@ -80,7 +53,7 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 			}
 		];
 		this.filterAndRender();
-		this._contactsChanged.emit(this.items);
+		this._itemsChanged.emit(this.items);
 	}
 
 
@@ -134,7 +107,7 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 			const item = document.createElement('div');
 			item.className = `cm-group-item ${this.selectedGroup === groupName ? 'active' : ''}`;
 			item.innerHTML = `
-                <span><i class="bx bx-folder"></i> ${this.escapeHTML(groupName)}</span>
+                <span><i class="bx bx-folder"></i> ${this.escapeHtml(groupName)}</span>
                 <span class="cm-count">${count}</span>
             `;
 			item.addEventListener('click', () =>
@@ -157,22 +130,22 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 
 		this.filteredContacts.forEach(c =>
 		{
-			const isSelected = c.uid === this.selectedContactUid;
+			const isSelected = c.uid === this._selectedItemId;
 			const card = document.createElement('div');
 			card.className = `cm-contact-card ${isSelected ? 'selected' : ''}`;
 			card.innerHTML = `
                 <div class="cm-avatar">${c.fn.charAt(0).toUpperCase()}</div>
                 <div class="cm-contact-preview">
-                    <span class="cm-name">${this.escapeHTML(c.fn)}</span>
-                    <span class="cm-org">${this.escapeHTML(c.org || c.title || 'No Organization')}</span>
+                    <span class="cm-name">${this.escapeHtml(c.fn)}</span>
+                    <span class="cm-org">${this.escapeHtml(c.org || c.title || 'No Organization')}</span>
                 </div>
             `;
 			card.addEventListener('click', () =>
 			{
-				this.selectedContactUid = c.uid;
-				this._selectedContact.emit(c.uid);
+				this._selectedItemId = c.uid;
+				this._selectedItem.emit(c);
 				this.isEditing = false;
-				this._editContact.emit(false);
+				this._editItem.emit(false);
 				this.renderContactList();
 			});
 			this.contactListEl.appendChild(card);
@@ -183,9 +156,9 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 	{
 		const newC = ParseVCard.createNewContact();
 		this.items?.push(newC);
-		this.selectedContactUid = newC.uid;
+		this._selectedItemId = newC.uid;
 		this.isEditing = true;
-		this._editContact.emit(true);
+		this._editItem.emit(true);
 		this.filterAndRender();
 	}
 
@@ -193,8 +166,13 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 	{
 		this.renderGroups();
 
-		const query = this.searchInput.value.toLowerCase();
-
+		const query = this.searchInput?.value.toLowerCase();
+		if(!query)
+		{
+			this.filteredContacts = this.items ?? [];
+			this.renderContactList();
+			return;
+		}
 		this.filteredContacts = this.items?.filter(c =>
 		{
 			const matchesGroup = this.selectedGroup === 'All' || c.categories === this.selectedGroup;
@@ -208,10 +186,4 @@ export class ContactsSidebar extends widgetSelf.SidebarUpdateWidget<ContactsWidg
 		this.renderContactList();
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

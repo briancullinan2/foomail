@@ -58,13 +58,8 @@ export class TasksSidebar extends widgetSelf.SidebarChangeWidget<TasksWidget, Ta
 
 	constructor(title?: string, options?: IMainpanelOptions<TasksWidget, TaskTask[]>)
 	{
-		super(TasksSidebar.name, options);
-		this.title.label = title ?? 'Tasks';
-		this.title.iconClass = 'bx bx-card-view-tiles';
-		this.title.closable = true;
+		super(TasksSidebar.name, title ?? 'Tasks', options);
 		this.initDom();
-		// this.loadStellarDemoData();
-		this.loadSampleTasks();
 	}
 
 	protected override onAfterAttach(msg: Message): void
@@ -115,11 +110,4 @@ export class TasksSidebar extends widgetSelf.SidebarChangeWidget<TasksWidget, Ta
 		});
 	}
 
-
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

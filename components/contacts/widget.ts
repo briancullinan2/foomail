@@ -5,115 +5,22 @@ import { ContactsSidebar } from './widget-sidebar';
 import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow } from '../bundle/menu.d';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
 import { ISignal, Signal } from '@lumino/signaling';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & LuminoLayoutWindow
-	& RepositorySettingsWindow = self as unknown as any;
+	& RepositorySettingsWindow & WidgetExtensionsWindow = self as unknown as any;
 
-export class ContactsWidget extends Widget
+export class ContactsWidget extends widgetSelf.WithChangingWidget<ContactsWidget, VCardContact>
 {
-	private contacts: VCardContact[] = [];
-	private selectedContactUid: string | null = null;
-	private isEditing: boolean = false;
-
-	// UI Elements
 	private detailPaneEl!: HTMLElement;
-	private _contactsSidebar?: ContactsSidebar;
-	private subSelected: (_: Widget, id: string) => any = (_, id) =>
-	{
-		this.selectedContactUid = id;
-		this.renderDetailPane();
-	};
-	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
-	{
-		this.isEditing = edit;
-		this.renderDetailPane();
-	};
-	private subChanged: (_: Widget, items: VCardContact[]) => any = (_, items) =>
-	{
-		this.contacts = items;
-		this.renderDetailPane();
-	};
-	private _contactsChanged: Signal<ContactsWidget, VCardContact[]> = new Signal(this);
-
-	public get contactsChanged(): ISignal<ContactsWidget, VCardContact[]>
-	{
-		return this._contactsChanged;
-	}
 
 	constructor(title?: string)
 	{
-		super();
-		this.title.label = title ?? 'Contacts List';
-		this.title.iconClass = 'bx bx-group';
-		this.title.closable = true;
+		super(title);
 		this.addClass('lumino-contact-manager');
 		this.initDOM();
 	}
 
-	protected override onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		if(this._contactsSidebar && !this._contactsSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
-		this.resubscribeSidebar();
-	}
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-		this.resubscribeSidebar();
-	}
-
-	private resubscribeSidebar()
-	{
-		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
-		this._contactsSidebar?.editContact.disconnect(this.subEditing);
-		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
-		this._contactsSidebar?.selectedContact.connect(this.subSelected);
-		this._contactsSidebar?.editContact.connect(this.subEditing);
-		this._contactsSidebar?.contactsChanged.connect(this.subChanged);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
-		this._contactsSidebar?.editContact.disconnect(this.subEditing);
-		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
-		this._contactsSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._contactsSidebar?.selectedContact.disconnect(this.subSelected);
-		this._contactsSidebar?.editContact.disconnect(this.subEditing);
-		this._contactsSidebar?.contactsChanged.disconnect(this.subChanged);
-		this._contactsSidebar?.close();
-		super.onBeforeDetach(msg);
-	}
-
-	private openSidebar()
-	{
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._contactsSidebar)
-			{
-				if(!this._contactsSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._contactsSidebar, {
-						type: 'outline',
-						projectId: that._contactsSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
 
 	private initDOM(): void
 	{
@@ -127,8 +34,8 @@ export class ContactsWidget extends Widget
 
 		// Cache DOM elements
 		this.detailPaneEl = this.node.querySelector('#cmDetailPane') as HTMLElement;
-		this._contactsSidebar = new ContactsSidebar(undefined, {
-			itemsChanged: this.contactsChanged
+		this._sidebarWidget = new ContactsSidebar(undefined, {
+			itemsChanged: this.itemsChanged
 		});
 		this.resubscribeSidebar();
 	}
@@ -146,12 +53,12 @@ export class ContactsWidget extends Widget
 		}
 		// this.renderGroups();
 		// this.filterAndRender();
-		this._contactsChanged.emit(contacts);
+		this._itemsChanged.emit(contacts);
 	}
 
-	private renderDetailPane(): void
+	protected filterAndRender(): void
 	{
-		const contact = this.contacts.find(c => c.uid === this.selectedContactUid);
+		const contact = this.items?.find(c => c.uid === this._selectedItemId);
 		if(!contact)
 		{
 			this.detailPaneEl.innerHTML = `
@@ -223,7 +130,7 @@ export class ContactsWidget extends Widget
 		this.detailPaneEl.querySelector('#cmEditBtn')?.addEventListener('click', () =>
 		{
 			this.isEditing = true;
-			this.renderDetailPane();
+			this.filterAndRender();
 		});
 
 		this.detailPaneEl.querySelector('#cmExportVcfBtn')?.addEventListener('click', () =>
@@ -235,9 +142,9 @@ export class ContactsWidget extends Widget
 		{
 			if(confirm(`Delete contact "${c.fn}"?`))
 			{
-				this.contacts = this.contacts.filter(item => item.uid !== c.uid);
-				this.selectedContactUid = null;
-				this._contactsChanged.emit(this.contacts);
+				this.items = this.items?.filter(item => item.uid !== c.uid);
+				this._selectedItemId = undefined;
+				this._itemsChanged.emit(this.items ?? []);
 				// this.renderGroups();
 				// this.filterAndRender();
 				this.detailPaneEl.innerHTML = `<div class="cm-empty-state"><i class="bx bx-user-pin"></i><p>Select a contact...</p></div>`;
@@ -296,21 +203,15 @@ export class ContactsWidget extends Widget
 
 			c.rev = new Date().toISOString();
 			this.isEditing = false;
-			this._contactsChanged.emit([c]);
-			this.renderDetailPane();
+			this._itemsChanged.emit([c]);
+			this.filterAndRender();
 		});
 
 		this.detailPaneEl.querySelector('#cmCancelBtn')?.addEventListener('click', () =>
 		{
 			this.isEditing = false;
-			this.renderDetailPane();
+			this.filterAndRender();
 		});
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return (str || '').replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }

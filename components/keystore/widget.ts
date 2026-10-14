@@ -5,6 +5,7 @@ import { ISignal, Signal } from '@lumino/signaling';
 import type { GlobalToolbarsWindow, LuminoMenuWindow, RepositorySettingsWindow } from '../bundle/menu.d';
 import type { LuminoLayoutWindow } from '../bundle/lumino.d';
 import { KeyParser } from './key-parser';
+import type { WidgetExtensionsWindow } from '../bundle/widget-extensions';
 
 // Define interfaces for credential records and autofill fields
 export interface CredentialField
@@ -31,13 +32,12 @@ export interface CredentialRecord
 }
 
 
-const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & RepositorySettingsWindow & LuminoLayoutWindow = self as unknown as any;
+const widgetSelf: GlobalToolbarsWindow & LuminoMenuWindow & RepositorySettingsWindow & LuminoLayoutWindow
+	& WidgetExtensionsWindow = self as unknown as any;
 
 
-export class KeystoreWidget extends Widget
+export class KeystoreWidget extends widgetSelf.WithChangingWidget<KeystoreWidget, CredentialRecord>
 {
-	private credentials: CredentialRecord[] = [];
-	private selectedCredentialId: string | null = null;
 	private filteredCredentials: CredentialRecord[] = [];
 
 	// UI Elements
@@ -47,38 +47,6 @@ export class KeystoreWidget extends Widget
 
 	private isUnlocked: boolean = false;
 	private currentPin: string = '1234'; // Default PIN for demo unlock
-	private _keystoreSidebar?: PasswordsSidebar;
-	private _passwordsChanged: Signal<KeystoreWidget, CredentialRecord[]> = new Signal(this);
-	private isEditing: boolean = false;
-
-	private subSelected: (_: Widget, item: CredentialRecord) => any = (_, item) =>
-	{
-		this.selectedCredentialId = item.id;
-		this.renderDetailView();
-	};
-
-	private subCreated: (_: Widget, type: CredentialType) => any = (_, type) =>
-	{
-		this.createNewCredential(type);
-		this.renderDetailView();
-	};
-
-	private subEditing: (_: Widget, id: boolean) => any = (_, edit) =>
-	{
-		this.isEditing = edit;
-		this.renderDetailView();
-	};
-
-	private subChanged: (_: Widget, items: CredentialRecord[]) => any = (_, items) =>
-	{
-		this.credentials = items;
-		this.renderDetailView();
-	};
-
-	public get passwordsChanged(): ISignal<KeystoreWidget, CredentialRecord[]>
-	{
-		return this._passwordsChanged;
-	}
 
 	constructor(title?: string)
 	{
@@ -89,80 +57,6 @@ export class KeystoreWidget extends Widget
 		this.addClass('lumino-password-manager');
 		this.initDOM();
 		// KeyParser.initIndexedDB().then(() => this.loadCredentials());
-	}
-
-	protected override onAfterShow(msg: Message): void
-	{
-		super.onAfterShow(msg);
-		this.openSidebar();
-		this.resubscribeSidebar();
-	}
-
-	private resubscribeSidebar()
-	{
-		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
-		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
-		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
-		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
-		this._keystoreSidebar?.selectedPassword.connect(this.subSelected);
-		this._keystoreSidebar?.createPassword.connect(this.subCreated);
-		// this._keystoreSidebar?.editEmail.connect(this.subEditing);
-		this._keystoreSidebar?.passwordsChanged.connect(this.subChanged);
-	}
-
-
-	protected override onBeforeHide(msg: Message): void
-	{
-		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
-		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
-		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
-		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
-		this._keystoreSidebar?.close();
-		super.onBeforeHide(msg);
-	}
-
-
-	protected override onBeforeDetach(msg: Message): void
-	{
-		this._keystoreSidebar?.selectedPassword.disconnect(this.subSelected);
-		this._keystoreSidebar?.createPassword.disconnect(this.subCreated);
-		// this._keystoreSidebar?.editEmail.disconnect(this.subEditing);
-		this._keystoreSidebar?.passwordsChanged.disconnect(this.subChanged);
-		this._keystoreSidebar?.close();
-		super.onBeforeDetach(msg);
-	}
-
-	private openSidebar()
-	{
-		if(!this.isUnlocked)
-		{
-			return;
-		}
-		const that = this;
-		setTimeout(() =>
-		{
-			if(widgetSelf.mainDock && widgetSelf.LayoutAdjuster && that._keystoreSidebar)
-			{
-				if(!this._keystoreSidebar?.isAttached)
-				{
-					widgetSelf.LayoutAdjuster?.addOptimalWidgetLayout(widgetSelf.mainDock, that._keystoreSidebar, {
-						type: 'outline',
-						projectId: that._keystoreSidebar?.constructor.name
-					});
-				}
-			}
-		}, 300);
-	}
-
-
-	protected onAfterAttach(msg: Message): void
-	{
-		super.onAfterAttach(msg);
-		if(this._keystoreSidebar && !this._keystoreSidebar.isAttached)
-		{
-			this.openSidebar();
-		}
-		this.resubscribeSidebar();
 	}
 
 	private initDOM(): void
@@ -204,9 +98,6 @@ export class KeystoreWidget extends Widget
 			if(this.pinInput.value === this.currentPin) this.handleUnlock();
 			if(this.pinInput.value.length === 4) this.handleUnlock();
 		});
-		this._keystoreSidebar = new PasswordsSidebar(undefined, {
-			passwordsChanged: this.passwordsChanged
-		});
 
 	}
 
@@ -217,8 +108,14 @@ export class KeystoreWidget extends Widget
 			this.isUnlocked = true;
 			this.pinOverlayEl.style.display = 'none';
 			this.loadCredentials();
+			if(!this._sidebarWidget)
+			{
+				this._sidebarWidget = new PasswordsSidebar(undefined, {
+					itemsChanged: this.itemsChanged
+				});
+			}
 			this.openSidebar();
-			this.renderDetailView();
+			this.filterAndRender();
 		} else
 		{
 			this.pinInput.classList.add('shake');
@@ -239,12 +136,12 @@ export class KeystoreWidget extends Widget
 
 			request.onsuccess = () =>
 			{
-				this.credentials = request.result || [];
-				if(this.credentials.length === 0)
+				this.items = request.result || [];
+				if(this.items.length === 0)
 				{
 					this.seedDefaultData();
 				}
-				this._passwordsChanged.emit(this.credentials);
+				this._itemsChanged.emit(this.items);
 				resolve();
 			};
 			transaction.onerror = (e) => reject(e);
@@ -306,7 +203,7 @@ export class KeystoreWidget extends Widget
 		}
 	}
 
-	private createNewCredential(type?: CredentialType): void
+	protected override createNew(type?: CredentialType): void
 	{
 		const newRec: CredentialRecord = {
 			id: 'rec-' + Math.random().toString(36).substring(2, 9),
@@ -322,14 +219,14 @@ export class KeystoreWidget extends Widget
 			]
 		};
 
-		this.selectedCredentialId = newRec.id;
+		this._selectedItemId = newRec.id;
 	}
 
-	private renderDetailView(): void
+	protected filterAndRender(): void
 	{
 		if(!this.isUnlocked) return;
 
-		const record = this.credentials.find(c => c.id === this.selectedCredentialId);
+		const record = this.items?.find(c => c.id === this._selectedItemId);
 		if(!record)
 		{
 			this.detailContentEl.innerHTML = `
@@ -395,7 +292,7 @@ export class KeystoreWidget extends Widget
 			if(confirm(`Delete "${record.title}"?`))
 			{
 				await KeyParser.deleteCredentialFromDB(record.id);
-				if(this.selectedCredentialId === record.id) this.selectedCredentialId = null;
+				if(this._selectedItemId === record.id) this._selectedItemId = undefined;
 				await this.loadCredentials();
 			}
 		});
@@ -485,10 +382,4 @@ export class KeystoreWidget extends Widget
 		});
 	}
 
-	private escapeHTML(str: string): string
-	{
-		return str.replace(/[&<>'"]/g,
-			tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-		);
-	}
 }
